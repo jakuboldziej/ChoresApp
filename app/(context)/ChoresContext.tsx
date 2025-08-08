@@ -35,7 +35,7 @@ export function ChoresProvider({ children }: PropsWithChildren) {
   const fetchData = useCallback(async () => {
     setIsLoading(true);
     try {
-      const response = await getChores(user?.displayName, session);
+      const response = await getChores(user?.displayName);
 
       console.log(response);
 
@@ -48,7 +48,7 @@ export function ChoresProvider({ children }: PropsWithChildren) {
     } finally {
       setIsLoading(false);
     }
-  }, [user?.displayName, session]);
+  }, [user?.displayName]);
 
   useEffect(() => {
     if (!session || !user) return;
