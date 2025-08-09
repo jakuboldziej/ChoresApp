@@ -3,7 +3,7 @@ import { useChores } from "@/app/(context)/ChoresContext";
 import { postChore } from "@/lib/fetch/chores";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useRef, useState } from "react";
-import { Alert, Modal, ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, Alert, Modal, ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function AddChore() {
@@ -108,7 +108,11 @@ export default function AddChore() {
                     onPress={handleAddChore}
                     disabled={isLoading}
                   >
-                    <Text className="text-white text-center font-semibold text-lg">Dodaj</Text>
+                    {isLoading ? (
+                      <ActivityIndicator color="white" />
+                    ) : (
+                      <Text className="text-white text-center font-semibold text-lg">Dodaj</Text>
+                    )}
                   </TouchableOpacity>
                 </View>
               </ScrollView>

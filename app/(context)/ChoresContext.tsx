@@ -22,12 +22,14 @@ interface ChoresContextTypes {
   chores: ChoreType[];
   isLoading: boolean;
   dispatchChore: React.Dispatch<ChoreAction>;
+  fetchData: () => Promise<void>;
 }
 
 const ChoresContext = createContext<ChoresContextTypes>({
   chores: [],
   isLoading: false,
-  dispatchChore: () => { }
+  dispatchChore: () => { },
+  fetchData: async () => { }
 });
 
 export function useChores() {
@@ -90,7 +92,8 @@ export function ChoresProvider({ children }: PropsWithChildren) {
       value={{
         chores,
         dispatchChore: dispatch,
-        isLoading
+        isLoading,
+        fetchData
       }}
     >
       {children}

@@ -1,5 +1,6 @@
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import "../global.css";
 import { SessionProvider } from "./(context)/AuthContext";
@@ -8,19 +9,22 @@ import { SplashScreenController } from "./splash";
 
 export default function RootLayout() {
   return (
-    <SessionProvider>
-      <ChoresProvider>
-        <SplashScreenController />
-        <StatusBar style="auto" />
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <SessionProvider>
+        <ChoresProvider>
+          <SplashScreenController />
+          <StatusBar style="auto" />
 
-        <SafeAreaProvider>
-          <Stack>
-            <Stack.Screen name="index" options={{ headerShown: false }} />
-            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-            <Stack.Screen name="sign-in" options={{ headerShown: false }} />
-          </Stack>
-        </SafeAreaProvider>
-      </ChoresProvider>
-    </SessionProvider>
+          <SafeAreaProvider>
+            <Stack>
+              <Stack.Screen name="index" options={{ headerShown: false }} />
+              <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+              <Stack.Screen name="sign-in" options={{ headerShown: false }} />
+              <Stack.Screen name="chore/[id]" options={{ headerShown: false }} />
+            </Stack>
+          </SafeAreaProvider>
+        </ChoresProvider>
+      </SessionProvider>
+    </GestureHandlerRootView>
   );
 }

@@ -10,7 +10,7 @@ export default function Index() {
         Chores App
       </Text>
 
-      <View className="w-full gap-4">
+      <View className="w-full gap-4 flex-1">
         <AddChore />
         <RecentChores />
       </View>

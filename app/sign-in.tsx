@@ -110,7 +110,11 @@ export default function SignIn() {
           onPress={() => handleSignIn(true)}
           disabled={isLoading}
         >
-          <Text className="text-gray-800 text-center font-semibold text-lg">Zaloguj się jako gość</Text>
+          {isLoading ? (
+            <ActivityIndicator color="white" />
+          ) : (
+            <Text className="text-gray-800 text-center font-semibold text-lg">Zaloguj się jako gość</Text>
+          )}
         </TouchableOpacity>
 
         {errorMessage && <Text className='text-red-500'>{errorMessage}</Text>}
