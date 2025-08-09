@@ -35,8 +35,9 @@ export default function SignIn() {
       if (asGuest) {
         await signIn(asGuest);
       } else {
-        const loginResponse = await login(displayName, password);
-        await signIn(false, loginResponse as LoginResponse);
+        const response = await login(displayName, password);
+        if (!response) throw new Error("Login response is undefined");
+        await signIn(false, response as LoginResponse);
       }
       router.replace('/(tabs)');
     } catch {

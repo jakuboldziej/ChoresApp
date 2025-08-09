@@ -1,5 +1,6 @@
 import AddChore from "@/components/Chores/AddChore";
-import { Text } from "react-native";
+import RecentChores from "@/components/Chores/RecentChores";
+import { Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function Index() {
@@ -9,7 +10,10 @@ export default function Index() {
         Chores App
       </Text>
 
-      <AddChore />
+      <View className="w-full gap-4">
+        <AddChore />
+        <RecentChores />
+      </View>
     </SafeAreaView>
   );
 }

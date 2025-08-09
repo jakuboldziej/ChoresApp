@@ -1,4 +1,4 @@
-import { apiUrl } from "../variables";
+import { apiUrl } from "../constants";
 
 export const getUser = async (displayName: string) => {
   try {

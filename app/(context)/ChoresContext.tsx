@@ -1,21 +1,33 @@
 import { parseAuthToken } from "@/lib/auth";
 import { getChores } from "@/lib/fetch/chores";
-import { createContext, PropsWithChildren, use, useCallback, useEffect, useState } from "react";
+import { createContext, PropsWithChildren, use, useCallback, useEffect, useReducer, useState } from "react";
 import { Alert } from "react-native";
 import { useSession } from "./AuthContext";
 
 export interface ChoreType {
-  _id: string;
+  _id?: string;
+  ownerId: string;
+  usersList: string[];
+  title: string;
+  description: string;
+}
+
+interface ChoreAction {
+  type: 'create' | 'add-chore' | 'add-user';
+  chores?: ChoreType[];
+  newChore?: ChoreType;
 }
 
 interface ChoresContextTypes {
   chores: ChoreType[];
   isLoading: boolean;
+  dispatchChore: React.Dispatch<ChoreAction>;
 }
 
 const ChoresContext = createContext<ChoresContextTypes>({
   chores: [],
-  isLoading: false
+  isLoading: false,
+  dispatchChore: () => { }
 });
 
 export function useChores() {
@@ -29,7 +41,21 @@ export function useChores() {
 export function ChoresProvider({ children }: PropsWithChildren) {
   const { session, user } = useSession();
 
-  const [chores, setChores] = useState<ChoreType[]>([]);
+  const choresReducer = (state: ChoreType[], action: ChoreAction): ChoreType[] => {
+    switch (action.type) {
+      case 'create':
+        return action.chores || [];
+      case 'add-chore':
+        return action.newChore ? [action.newChore, ...state] : state;
+      case 'add-user':
+        return state;
+      default:
+        return state;
+    }
+  }
+
+  const [chores, dispatch] = useReducer(choresReducer, []);
+
   const [isLoading, setIsLoading] = useState(false);
 
   const fetchData = useCallback(async () => {
@@ -37,9 +63,7 @@ export function ChoresProvider({ children }: PropsWithChildren) {
     try {
       const response = await getChores(user?.displayName);
 
-      console.log(response);
-
-      setChores(response);
+      dispatch({ type: "create", chores: response });
     } catch (error: unknown) {
       if (error instanceof TypeError) {
         Alert.alert(error.message);
@@ -65,6 +89,7 @@ export function ChoresProvider({ children }: PropsWithChildren) {
     <ChoresContext
       value={{
         chores,
+        dispatchChore: dispatch,
         isLoading
       }}
     >

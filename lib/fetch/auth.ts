@@ -1,6 +1,6 @@
 import { Alert } from "react-native";
 import { LoginResponse, User } from "../auth";
-import { apiUrl } from "../variables";
+import { apiUrl } from "../constants";
 import { getUser } from "./users";
 
 export const testConnection = async (): Promise<boolean> => {
@@ -63,7 +63,6 @@ export const login = async (displayName: string, password: string) => {
         ]
       );
     } else if (error instanceof Error) {
-      Alert.alert("Błąd autoryzacji", error.message);
       throw error;
     } else {
       const unknownError = new Error("Nieoczekiwany błąd przy logowaniu.");
