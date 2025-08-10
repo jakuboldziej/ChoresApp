@@ -53,7 +53,7 @@ export default function ChoreDetails() {
           <View className="mb-4">
             <Text className="text-sm font-semibold text-gray-600 mb-2">Opis:</Text>
             <Text className="text-base text-gray-800 leading-6">
-              {chore.description}
+              {chore.description || "Brak"}
             </Text>
           </View>
 

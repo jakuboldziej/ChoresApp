@@ -5,6 +5,7 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 import { useRef, useState } from "react";
 import { ActivityIndicator, Alert, Modal, ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import UserSelector from "./UserSelector";
 
 export default function AddChore() {
   const { user } = useSession();
@@ -15,6 +16,17 @@ export default function AddChore() {
 
   const [inputTitle, setInputTitle] = useState("");
   const [inputDescription, setInputDescription] = useState("");
+  const [selectedUserNames, setSelectedUserNames] = useState<string[]>([]);
+
+  const toggleUserSelection = (userName: string) => {
+    setSelectedUserNames(prev => {
+      if (prev.includes(userName)) {
+        return prev.filter(name => name !== userName);
+      } else {
+        return [...prev, userName];
+      }
+    });
+  };
 
   const inputDescriptionRef = useRef<TextInput>(null);
 
@@ -27,22 +39,33 @@ export default function AddChore() {
         return;
       }
 
-      if (!inputTitle || !inputDescription) {
-        Alert.alert("Błąd", "Wypełnij wszystkie pola.");
+      if (!inputTitle) {
+        Alert.alert("Błąd", "Wypełnij pole tytuł.");
+        return;
+      }
+
+      if (selectedUserNames.length === 0) {
+        Alert.alert("Błąd", "Wypełnij przynajmniej jednego użytkownika.");
         return;
       }
 
       const response = await postChore({
         ownerId: user._id,
-        usersList: [user._id],
+        usersList: selectedUserNames,
         title: inputTitle,
         description: inputDescription
       });
 
-      if (!response) throw new Error("Błąd w tworzeniu obowiązku");
+      if (!response || (typeof response === "object" && "message" in response && typeof response.message === "string")) {
+        throw new Error((response as { message?: string }).message || "Błąd w tworzeniu obowiązku");
+      }
 
       dispatchChore({ type: "add-chore", newChore: response });
-      setModalVisible(true);
+
+      setInputTitle("");
+      setInputDescription("");
+      setSelectedUserNames([]);
+      setModalVisible(false);
     } catch (error) {
       console.error(error);
       if (error instanceof TypeError) {
@@ -57,7 +80,12 @@ export default function AddChore() {
     <View>
       <TouchableOpacity
         className="self-center bg-blue-600 p-3 rounded-lg mt-4"
-        onPress={() => setModalVisible(true)}
+        onPress={() => {
+          setModalVisible(true);
+          if (user?.displayName && !selectedUserNames.includes(user.displayName)) {
+            setSelectedUserNames(prev => ([...prev, user.displayName]));
+          }
+        }}
       >
         <Text className="text-white text-center font-semibold text-lg">Dodaj obowiązek</Text>
       </TouchableOpacity>
@@ -72,7 +100,10 @@ export default function AddChore() {
           <View className="relative flex-1 p-6 m-8 bg-slate-300 rounded-3xl overflow-hidden">
             <TouchableOpacity
               className="absolute top-0 right-0 p-4 z-10"
-              onPress={() => setModalVisible(!modalVisible)}>
+              onPress={() => {
+                setSelectedUserNames([]);
+                setModalVisible(!modalVisible);
+              }}>
               <Ionicons name="close-circle" size={30} />
             </TouchableOpacity>
 
@@ -102,6 +133,11 @@ export default function AddChore() {
                       returnKeyType="next"
                     />
                   </View>
+
+                  <UserSelector
+                    selectedUserNames={selectedUserNames}
+                    onToggleUser={toggleUserSelection}
+                  />
 
                   <TouchableOpacity
                     className={`self-end w-fit p-3 rounded-lg mt-6 ${isLoading === true ? "bg-blue-600/30" : "bg-blue-600"}`}
