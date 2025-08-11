@@ -11,6 +11,10 @@ export interface User {
   friends?: string;
   friendsCode?: string;
   guest?: boolean;
+  friendsRequests?: {
+    pending: string[];
+    received: string[];
+  };
 }
 
 export interface AuthToken {

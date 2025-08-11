@@ -1,15 +1,15 @@
 import { getItemAsync } from "expo-secure-store";
-import { parseAuthToken } from "../auth";
+import { parseAuthToken, User } from "../auth";
 import { apiUrl } from "../constants";
 
-export const getUser = async (displayName: string) => {
+export const getUser = async (displayName: string): Promise<User | null> => {
   try {
     const response = await fetch(`${apiUrl}/auth/users/${displayName}`);
 
     return await response.json();
   } catch (error: unknown) {
     console.error('getUser error details:', error);
-    return false;
+    return null;
   }
 }
 

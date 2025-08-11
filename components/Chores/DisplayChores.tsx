@@ -49,7 +49,7 @@ export default function DisplayChores({ currentScreen }: DisplayChoresProps) {
 
   const onRefresh = async () => {
     try {
-      if (!user?._id) throw new Error("User is required");
+      if (!user?._id) throw new Error("Użytkownik jest wymagany");
 
       await fetchData({
         userId: user._id

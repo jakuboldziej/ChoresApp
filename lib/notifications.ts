@@ -3,13 +3,13 @@ import * as Device from 'expo-device';
 import { AndroidImportance, getExpoPushTokenAsync, getPermissionsAsync, requestPermissionsAsync, SchedulableTriggerInputTypes, scheduleNotificationAsync, setNotificationChannelAsync } from "expo-notifications";
 import { Platform } from "react-native";
 
-export const schedulePushNotification = async () => {
-  console.log("added new push notification")
+export const schedulePushNotification = async (title: string, body: string, data: Record<string, unknown>) => {
+  console.log("added new push notification", { title, body, data });
   await scheduleNotificationAsync({
     content: {
-      title: "You've got mail! 📬",
-      body: 'Here is the notification body',
-      data: { data: 'goes here', test: { test1: 'more data' } },
+      title,
+      body,
+      data,
     },
     trigger: {
       type: SchedulableTriggerInputTypes.TIME_INTERVAL,
@@ -52,7 +52,7 @@ export const registerForPushNotificationsAsync = async() =>  {
           projectId,
         })
       ).data;
-      console.log(token);
+      // console.log("getExpoPushTokenAsync", token);
     } catch (e) {
       token = `${e}`;
     }

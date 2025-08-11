@@ -110,7 +110,7 @@ export function ChoresProvider({ children }: PropsWithChildren) {
     setIsLoading(true);
 
     try {
-      if (!user?._id) throw new Error("User is required");
+      if (!user?._id) throw new Error("Użytkownik jest wymagany");
 
       const response = await getChores({
         userId: user._id,
