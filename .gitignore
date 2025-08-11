@@ -11,7 +11,6 @@ expo-env.d.ts
 nativewind-env.d.ts
 .env.*
 android/
-eas.json
 
 # Native
 .kotlin/
