@@ -29,6 +29,15 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
+        name="chores"
+        options={{
+          title: 'Obowiązki',
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons name={focused ? 'trail-sign' : 'trail-sign-outline'} color={color} size={24} />
+          ),
+        }}
+      />
+      <Tabs.Screen
         name="settings"
         options={{
           title: 'Profil',

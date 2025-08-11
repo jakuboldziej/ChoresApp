@@ -1,3 +1,4 @@
+import { setNotificationHandler } from 'expo-notifications';
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -6,6 +7,15 @@ import "../global.css";
 import { SessionProvider } from "./(context)/AuthContext";
 import { ChoresProvider } from "./(context)/ChoresContext";
 import { SplashScreenController } from "./splash";
+
+setNotificationHandler({
+  handleNotification: async () => ({
+    shouldPlaySound: false,
+    shouldSetBadge: false,
+    shouldShowBanner: true,
+    shouldShowList: true,
+  }),
+});
 
 export default function RootLayout() {
   return (

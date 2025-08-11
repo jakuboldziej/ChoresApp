@@ -7,11 +7,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function ChoreDetails() {
   const { id } = useLocalSearchParams();
-  const { chores } = useChores();
+  const { chores, handleChoreFinished } = useChores();
   const router = useRouter();
 
   const chore = chores.find(c => c._id === id);
-
 
   if (!chore) {
     return (
@@ -45,7 +44,7 @@ export default function ChoreDetails() {
         className="flex-1 p-4"
         contentContainerStyle={{ flexGrow: 1, justifyContent: "space-between" }}
       >
-        <View className="bg-cyan-50 p-6 rounded-xl mb-6">
+        <View className={`p-6 rounded-xl mb-6 ${chore.finished === true ? "bg-yellow-400" : "bg-cyan-200"}`}>
           <Text className="text-2xl font-bold text-gray-800 mb-4">
             {chore.title}
           </Text>
@@ -93,8 +92,20 @@ export default function ChoreDetails() {
         </View>
 
         <View className="gap-3">
-          <TouchableOpacity className="bg-blue-500 p-4 rounded-lg">
-            <Text className="text-white font-semibold text-center">Oznacz jako wykonane</Text>
+          <TouchableOpacity
+            className="bg-blue-500 p-4 rounded-lg"
+            onPress={() => {
+              if (chore._id) {
+                handleChoreFinished(chore._id, chore.finished ?? false);
+                router.back();
+              }
+            }}
+          >
+            {chore.finished === true ? (
+              <Text className="text-white font-semibold text-center">Odznacz wykonanie</Text>
+            ) : (
+              <Text className="text-white font-semibold text-center">Oznacz jako wykonane</Text>
+            )}
           </TouchableOpacity>
 
           <TouchableOpacity className="bg-gray-500 p-4 rounded-lg">

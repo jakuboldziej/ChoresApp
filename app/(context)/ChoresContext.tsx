@@ -1,5 +1,5 @@
 import { parseAuthToken } from "@/lib/auth";
-import { getChores } from "@/lib/fetch/chores";
+import { getChores, patchChore } from "@/lib/fetch/chores";
 import { createContext, PropsWithChildren, use, useCallback, useEffect, useReducer, useState } from "react";
 import { Alert } from "react-native";
 import { useSession } from "./AuthContext";
@@ -10,26 +10,35 @@ export interface ChoreType {
   usersList: string[];
   title: string;
   description: string;
+  finished?: boolean;
+}
+
+export interface ChoreTypeFilters {
+  finished?: boolean;
+  userId?: string;
 }
 
 interface ChoreAction {
-  type: 'create' | 'add-chore' | 'add-user';
+  type: 'create' | 'update' | 'add-chore' | 'add-user';
   chores?: ChoreType[];
   newChore?: ChoreType;
+  updatedChore?: ChoreType;
 }
 
 interface ChoresContextTypes {
   chores: ChoreType[];
   isLoading: boolean;
   dispatchChore: React.Dispatch<ChoreAction>;
-  fetchData: () => Promise<void>;
+  fetchData: (filters?: ChoreTypeFilters) => Promise<void>;
+  handleChoreFinished: (choreId: string, choreFinished: boolean) => Promise<void>;
 }
 
 const ChoresContext = createContext<ChoresContextTypes>({
   chores: [],
   isLoading: false,
   dispatchChore: () => { },
-  fetchData: async () => { }
+  fetchData: async () => { },
+  handleChoreFinished: async () => { }
 });
 
 export function useChores() {
@@ -47,6 +56,11 @@ export function ChoresProvider({ children }: PropsWithChildren) {
     switch (action.type) {
       case 'create':
         return action.chores || [];
+      case 'update':
+        if (!action.updatedChore) return state;
+        return state.map(chore =>
+          chore._id === action.updatedChore!._id ? action.updatedChore! : chore
+        );
       case 'add-chore':
         return action.newChore ? [action.newChore, ...state] : state;
       case 'add-user':
@@ -60,10 +74,48 @@ export function ChoresProvider({ children }: PropsWithChildren) {
 
   const [isLoading, setIsLoading] = useState(false);
 
-  const fetchData = useCallback(async () => {
-    setIsLoading(true);
+  const handleChoreFinished = async (choreId: string, choreFinished: boolean) => {
+    if (!choreId) {
+      Alert.alert("Błąd", "Nie znaleziono obowiązku do oznaczenia jako wykonane.");
+      return;
+    }
+
     try {
-      const response = await getChores(user?.displayName);
+      if (!choreId) throw new Error("Brak identyfikatora obowiązku.");
+      const response = await patchChore({
+        _id: choreId,
+        finished: !choreFinished
+      });
+
+      if (!response) {
+        Alert.alert("Błąd", "Nie udało się zaktualizować obowiązku.");
+        return;
+      }
+
+      if ('message' in response) {
+        Alert.alert("Błąd", response.message);
+        return;
+      }
+
+      dispatch({ type: "update", updatedChore: response });
+    } catch (error) {
+      console.error(error);
+      if (error instanceof TypeError) {
+        Alert.alert("Błąd", error.message);
+      }
+    }
+  }
+
+  const fetchData = useCallback(async (filters?: ChoreTypeFilters) => {
+    setIsLoading(true);
+
+    try {
+      if (!user?._id) throw new Error("User is required");
+
+      const response = await getChores({
+        userId: user._id,
+        ...(filters || {})
+      });
 
       dispatch({ type: "create", chores: response });
     } catch (error: unknown) {
@@ -74,7 +126,7 @@ export function ChoresProvider({ children }: PropsWithChildren) {
     } finally {
       setIsLoading(false);
     }
-  }, [user?.displayName]);
+  }, [user?._id]);
 
   useEffect(() => {
     if (!session || !user) return;
@@ -84,7 +136,9 @@ export function ChoresProvider({ children }: PropsWithChildren) {
     const authToken = parseAuthToken(session);
     if (!authToken) return;
 
-    fetchData();
+    fetchData({
+      userId: user._id
+    });
   }, [session, user, fetchData]);
 
   return (
@@ -93,7 +147,8 @@ export function ChoresProvider({ children }: PropsWithChildren) {
         chores,
         dispatchChore: dispatch,
         isLoading,
-        fetchData
+        fetchData,
+        handleChoreFinished
       }}
     >
       {children}
