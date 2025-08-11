@@ -37,6 +37,17 @@ export default function Index() {
       <Text className="text-4xl font-bold text-gray-800 mb-4">Chores App</Text>
 
       <View className="w-full gap-4 flex-1">
+        <Text>Your expo push token: {expoPushToken}</Text>
+        <Text>{`Channels: ${JSON.stringify(
+          channels.map(c => c.id),
+          null,
+          2
+        )}`}</Text>
+        <View style={{ alignItems: 'center', justifyContent: 'center' }}>
+          <Text>Title: {notification && notification.request.content.title} </Text>
+          <Text>Body: {notification && notification.request.content.body}</Text>
+          <Text>Data: {notification && JSON.stringify(notification.request.content.data)}</Text>
+        </View>
         <Pressable
           className="p-4 bg-slate-500 rounded-xl w-fit"
           onPress={async () => {
