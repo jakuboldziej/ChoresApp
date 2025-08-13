@@ -1,5 +1,5 @@
 import { parseAuthToken } from "@/lib/auth";
-import { getChores, patchChore } from "@/lib/fetch/chores";
+import { deleteChore, getChores, patchChore } from "@/lib/fetch/chores";
 import { createContext, PropsWithChildren, use, useCallback, useEffect, useReducer, useState } from "react";
 import { Alert } from "react-native";
 import { useSession } from "./AuthContext";
@@ -7,7 +7,7 @@ import { useSession } from "./AuthContext";
 export interface ChoreType {
   _id?: string;
   ownerId: string;
-  usersList: string[];
+  usersList: { displayName: string; finished: boolean }[];
   title: string;
   description: string;
   finished?: boolean;
@@ -16,13 +16,16 @@ export interface ChoreType {
 export interface ChoreTypeFilters {
   finished?: boolean;
   userId?: string;
+  userInvolved?: string;
+  assignedTo?: string;
 }
 
 interface ChoreAction {
-  type: 'create' | 'update' | 'add-chore' | 'add-user';
+  type: 'create' | 'update' | 'delete' | 'add-chore' | 'add-user';
   chores?: ChoreType[];
   newChore?: ChoreType;
   updatedChore?: ChoreType;
+  deletedChoreId?: string;
 }
 
 interface ChoresContextTypes {
@@ -30,7 +33,8 @@ interface ChoresContextTypes {
   isLoading: boolean;
   dispatchChore: React.Dispatch<ChoreAction>;
   fetchData: (filters?: ChoreTypeFilters) => Promise<void>;
-  handleChoreFinished: (choreId: string, choreFinished: boolean) => Promise<void>;
+  handleChoreFinished: (choreId: string, userDisplayName: string) => Promise<void>;
+  handleChoreDelete: (choreId: string) => Promise<void>;
 }
 
 const ChoresContext = createContext<ChoresContextTypes>({
@@ -38,7 +42,8 @@ const ChoresContext = createContext<ChoresContextTypes>({
   isLoading: false,
   dispatchChore: () => { },
   fetchData: async () => { },
-  handleChoreFinished: async () => { }
+  handleChoreFinished: async () => { },
+  handleChoreDelete: async () => { }
 });
 
 export function useChores() {
@@ -61,6 +66,8 @@ export function ChoresProvider({ children }: PropsWithChildren) {
         return state.map(chore =>
           chore._id === action.updatedChore!._id ? action.updatedChore! : chore
         );
+      case 'delete':
+        return state.filter((chore) => chore._id !== action.deletedChoreId)
       case 'add-chore':
         return action.newChore ? [action.newChore, ...state] : state;
       case 'add-user':
@@ -74,7 +81,7 @@ export function ChoresProvider({ children }: PropsWithChildren) {
 
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleChoreFinished = async (choreId: string, choreFinished: boolean) => {
+  const handleChoreFinished = async (choreId: string, userDisplayName: string) => {
     if (!choreId) {
       Alert.alert("Błąd", "Nie znaleziono obowiązku do oznaczenia jako wykonane.");
       return;
@@ -82,9 +89,26 @@ export function ChoresProvider({ children }: PropsWithChildren) {
 
     try {
       if (!choreId) throw new Error("Brak identyfikatora obowiązku.");
+
+      const foundChore = chores.find((chore) => chore._id === choreId);
+
+      if (!foundChore) throw new Error("Nie znaleziono obowiązku.");
+
+      const foundChoreUser = foundChore.usersList.find((choreUser) => choreUser.displayName === userDisplayName);
+
+      if (!foundChoreUser) throw new Error("Nie znaleziono użytkownika obowiązku.");
+
+      const updatedUsersList = foundChore.usersList.map((choreUser) => {
+        if (choreUser.displayName === foundChoreUser.displayName) {
+          choreUser.finished = !choreUser.finished;
+        }
+
+        return choreUser;
+      })
+
       const response = await patchChore({
         _id: choreId,
-        finished: !choreFinished
+        usersList: updatedUsersList
       });
 
       if (!response) {
@@ -104,16 +128,45 @@ export function ChoresProvider({ children }: PropsWithChildren) {
         Alert.alert("Błąd", error.message);
       }
     }
+  };
+
+  const handleChoreDelete = async (choreId: string) => {
+    if (!choreId) {
+      Alert.alert("Błąd", "Nie znaleziono obowiązku do oznaczenia jako wykonane.");
+      return;
+    }
+
+    try {
+      if (!choreId) throw new Error("Brak identyfikatora obowiązku.");
+      const response = await deleteChore(choreId);
+
+      if (!response) {
+        Alert.alert("Błąd", "Nie udało się zaktualizować obowiązku.");
+        return;
+      }
+
+      if ('message' in response) {
+        Alert.alert("Błąd", response.message);
+        return;
+      }
+
+      dispatch({ type: "delete", deletedChoreId: choreId });
+    } catch (error) {
+      console.error(error);
+      if (error instanceof TypeError) {
+        Alert.alert("Błąd", error.message);
+      }
+    }
   }
 
   const fetchData = useCallback(async (filters?: ChoreTypeFilters) => {
     setIsLoading(true);
 
     try {
-      if (!user?._id) throw new Error("Użytkownik jest wymagany");
+      if (!user?.displayName) throw new Error("Użytkownik jest wymagany");
 
       const response = await getChores({
-        userId: user._id,
+        userInvolved: user.displayName,
         ...(filters || {})
       });
 
@@ -126,7 +179,7 @@ export function ChoresProvider({ children }: PropsWithChildren) {
     } finally {
       setIsLoading(false);
     }
-  }, [user?._id]);
+  }, [user?.displayName]);
 
   useEffect(() => {
     if (!session || !user) return;
@@ -148,7 +201,8 @@ export function ChoresProvider({ children }: PropsWithChildren) {
         dispatchChore: dispatch,
         isLoading,
         fetchData,
-        handleChoreFinished
+        handleChoreFinished,
+        handleChoreDelete
       }}
     >
       {children}

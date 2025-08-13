@@ -19,17 +19,14 @@ export function useUsersCache() {
   const promiseCache = useRef<Map<string, Promise<User | null>>>(new Map());
 
   const getUserById = useCallback(async (userId: string): Promise<User | null> => {
-    // Return cached user if available
     if (state.cache[userId] !== undefined) {
       return state.cache[userId];
     }
 
-    // Return existing promise if already loading
     if (promiseCache.current.has(userId)) {
       return promiseCache.current.get(userId)!;
     }
 
-    // Create new promise and cache it
     const promise = (async () => {
       try {
         setState(prev => ({

@@ -17,8 +17,8 @@ export const getChores = async (filters: ChoreTypeFilters): Promise<ChoreType[]>
       queryParams.append('finished', filters.finished.toString());
     }
     
-    if (filters.userId) {
-      queryParams.append('userId', filters.userId);
+    if (filters.userInvolved) {
+      queryParams.append('userInvolved', filters.userInvolved);
     }
 
     const queryString = queryParams.toString();
@@ -107,6 +107,31 @@ export const patchChore = async (data: Partial<ChoreType> & { _id: string }): Pr
     return result;
   } catch (error: unknown) {
     console.error("Error in patchChore:", error);
+    return null;
+  }
+};
+
+export const deleteChore = async (choreId: string): Promise<ChoreType | { message: string } | null> => {
+  const sessionString = await getItemAsync("session");
+  const session = sessionString ? parseAuthToken(sessionString) : null;
+
+  try {
+    const response = await fetch(`${apiUrl}/chores/${choreId}`, {
+      method: "DELETE",
+      headers: {
+        "Authorization": session && typeof session.token === "string" ? session.token : "",
+      },
+    });
+    
+    const result = await response.json();
+    
+    if (!response.ok) {
+      return result;
+    }
+    
+    return result;
+  } catch (error: unknown) {
+    console.error("Error in deleteChore:", error);
     return null;
   }
 };

@@ -1,4 +1,5 @@
 import { useSession } from '@/app/(context)/AuthContext';
+import { useFriends } from '@/app/(context)/FriendsContext';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import React from 'react';
 import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
@@ -15,28 +16,18 @@ interface UserSelectorProps {
 
 export default function UserSelector({ selectedUserNames, onToggleUser }: UserSelectorProps) {
   const { user } = useSession();
+  const { friends } = useFriends();
 
   const getAvailableUsers = (): UserOption[] => {
     const users: UserOption[] = [{ label: user?.displayName || 'Ja', value: user?._id || '' }];
 
-    if (user?.friends) {
-      try {
-        const friendsList = typeof user.friends === 'string'
-          ? JSON.parse(user.friends)
-          : user.friends;
-
-        if (Array.isArray(friendsList)) {
-          friendsList.forEach((friendsDisplayName: string) => {
-            users.push({
-              label: friendsDisplayName,
-              value: friendsDisplayName
-            });
-          });
-        }
-
-      } catch (error) {
-        console.error('Error parsing friends list:', error);
-      }
+    if (friends && Array.isArray(friends)) {
+      friends.forEach((friendDisplayName: string) => {
+        users.push({
+          label: friendDisplayName,
+          value: friendDisplayName
+        });
+      });
     }
 
     return users.filter((user, index, self) =>

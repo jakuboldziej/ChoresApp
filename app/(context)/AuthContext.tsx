@@ -5,7 +5,10 @@ import {
   type LoginResponse,
   type User
 } from '@/lib/auth';
+import { saveExpoToken } from '@/lib/fetch/auth';
 import { useStorageState } from '@/lib/hooks/useStorageState';
+import { registerForPushNotificationsAsync } from '@/lib/notifications';
+import { webSocketService } from '@/lib/websocket/WebSocketService';
 import { createContext, use, useEffect, useState, type PropsWithChildren } from 'react';
 
 interface AuthContextType {
@@ -13,6 +16,7 @@ interface AuthContextType {
   signOut: () => Promise<void>;
   session?: string | null;
   user?: User | null;
+  expoPushToken?: string | null;
   isLoading: boolean;
 }
 
@@ -21,6 +25,7 @@ const AuthContext = createContext<AuthContextType>({
   signOut: async () => { },
   session: null,
   user: null,
+  expoPushToken: null,
   isLoading: false,
 });
 
@@ -35,6 +40,7 @@ export function SessionProvider({ children }: PropsWithChildren) {
   const [[isLoading, session], setSession] = useStorageState('session');
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [userLoading, setUserLoading] = useState(false);
+  const [expoPushToken, setExpoPushToken] = useState<string | null>(null);
 
   const signIn = async (asGuest: boolean, response?: LoginResponse | undefined) => {
     try {
@@ -58,6 +64,8 @@ export function SessionProvider({ children }: PropsWithChildren) {
 
   const signOut = async () => {
     try {
+      webSocketService.resetConnection();
+
       setSession(null);
       setCurrentUser(null);
     } catch (error) {
@@ -92,6 +100,36 @@ export function SessionProvider({ children }: PropsWithChildren) {
     loadUser();
   }, [session, setSession]);
 
+  useEffect(() => {
+    const setupPushNotifications = async () => {
+      if (currentUser?.displayName) {
+        try {
+          const token = await registerForPushNotificationsAsync(currentUser.displayName);
+          if (token) {
+            await saveExpoToken(currentUser._id, token);
+            setExpoPushToken(token);
+          }
+        } catch (error) {
+          console.error('Failed to register for push notifications:', error);
+        }
+      } else {
+        setExpoPushToken(null);
+      }
+    };
+
+    const setupWebSocketConnection = () => {
+      if (currentUser?.displayName && currentUser?._id) {
+        webSocketService.authenticateUser(currentUser.displayName, currentUser._id);
+      } else if (!session && !isLoading && !userLoading) {
+        webSocketService.clearUserData();
+        webSocketService.disconnect();
+      }
+    };
+
+    setupPushNotifications();
+    setupWebSocketConnection();
+  }, [currentUser, isLoading, userLoading, session]);
+
   return (
     <AuthContext
       value={{
@@ -99,6 +137,7 @@ export function SessionProvider({ children }: PropsWithChildren) {
         signOut,
         session,
         user: currentUser,
+        expoPushToken,
         isLoading: isLoading || userLoading,
       }}>
       {children}

@@ -1,22 +1,40 @@
 import { useSession } from "@/app/(context)/AuthContext";
-import { useChores } from "@/app/(context)/ChoresContext";
-import { postChore } from "@/lib/fetch/chores";
+import { ChoreType, useChores } from "@/app/(context)/ChoresContext";
+import { patchChore, postChore } from "@/lib/fetch/chores";
 import Ionicons from "@expo/vector-icons/Ionicons";
-import { useRef, useState } from "react";
+import { PropsWithChildren, useEffect, useRef, useState } from "react";
 import { ActivityIndicator, Alert, Modal, ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import UserSelector from "./UserSelector";
 
-export default function AddChore() {
+interface ChoreModalProps extends PropsWithChildren {
+  isVisible: boolean;
+  onClose: () => void;
+  editChore?: ChoreType | null;
+  mode?: 'add' | 'edit';
+}
+
+export default function ChoreModal({ children, isVisible, onClose, editChore, mode = 'add' }: ChoreModalProps) {
   const { user } = useSession();
   const { dispatchChore } = useChores();
 
-  const [modalVisible, setModalVisible] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
   const [inputTitle, setInputTitle] = useState("");
   const [inputDescription, setInputDescription] = useState("");
   const [selectedUserNames, setSelectedUserNames] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (mode === 'edit' && editChore) {
+      setInputTitle(editChore.title);
+      setInputDescription(editChore.description || "");
+      setSelectedUserNames(editChore.usersList.map(user => user.displayName));
+    } else {
+      setInputTitle("");
+      setInputDescription("");
+      setSelectedUserNames(user?.displayName ? [user.displayName] : []);
+    }
+  }, [mode, editChore, user?.displayName, isVisible]);
 
   const toggleUserSelection = (userName: string) => {
     setSelectedUserNames(prev => {
@@ -30,12 +48,12 @@ export default function AddChore() {
 
   const inputDescriptionRef = useRef<TextInput>(null);
 
-  const handleAddChore = async () => {
+  const handleSubmit = async () => {
     setIsLoading(true);
 
     try {
       if (!user?._id) {
-        Alert.alert("Błąd", "Brak ID użytkownika. Nie można dodać obowiązku.");
+        Alert.alert("Błąd", "Brak ID użytkownika. Nie można zapisać obowiązku.");
         return;
       }
 
@@ -49,66 +67,79 @@ export default function AddChore() {
         return;
       }
 
-      const response = await postChore({
+      const choreData = {
         ownerId: user._id,
         usersList: selectedUserNames.map(name => ({ displayName: name, finished: false })),
         title: inputTitle,
         description: inputDescription
-      });
+      };
 
-      if (!response || (typeof response === "object" && "message" in response && typeof response.message === "string")) {
-        throw new Error((response as { message?: string }).message || "Błąd w tworzeniu obowiązku");
+      let response;
+
+      if (mode === 'edit' && editChore?._id) {
+        response = await patchChore({
+          _id: editChore._id,
+          ...choreData
+        });
+
+        if (!response || (typeof response === "object" && "message" in response)) {
+          throw new Error((response as { message?: string }).message || "Błąd w aktualizacji obowiązku");
+        }
+
+        dispatchChore({ type: "update", updatedChore: response as ChoreType });
+      } else {
+        response = await postChore(choreData);
+
+        if (!response || (typeof response === "object" && "message" in response && typeof response.message === "string")) {
+          throw new Error((response as { message?: string }).message || "Błąd w tworzeniu obowiązku");
+        }
+
+        dispatchChore({ type: "add-chore", newChore: response });
       }
-
-      dispatchChore({ type: "add-chore", newChore: response });
 
       setInputTitle("");
       setInputDescription("");
       setSelectedUserNames([]);
-      setModalVisible(false);
+      onClose();
     } catch (error) {
       console.error(error);
       if (error instanceof TypeError) {
-        Alert.alert("Błąd przy dodawaniu obowiązku", error.message)
+        Alert.alert(`Błąd przy ${mode === 'edit' ? 'aktualizacji' : 'dodawaniu'} obowiązku`, error.message)
       }
     } finally {
       setIsLoading(false);
     }
   };
 
+  const handleClose = () => {
+    setInputTitle("");
+    setInputDescription("");
+    setSelectedUserNames([]);
+    onClose();
+  };
+
   return (
     <View>
-      <TouchableOpacity
-        className="self-center bg-blue-600 p-3 rounded-lg mt-4"
-        onPress={() => {
-          setModalVisible(true);
-          if (user?.displayName && !selectedUserNames.includes(user.displayName)) {
-            setSelectedUserNames(prev => ([...prev, user.displayName]));
-          }
-        }}
-      >
-        <Text className="text-white text-center font-semibold text-lg">Dodaj obowiązek</Text>
-      </TouchableOpacity>
+      {children}
 
       <Modal
         animationType="slide"
         transparent={true}
-        visible={modalVisible}
-        onRequestClose={() => setModalVisible(!modalVisible)}
+        visible={isVisible}
+        onRequestClose={handleClose}
       >
         <SafeAreaView className="flex-1">
           <View className="relative flex-1 p-6 m-8 bg-slate-300 rounded-3xl overflow-hidden">
             <TouchableOpacity
               className="absolute top-0 right-0 p-4 z-10"
-              onPress={() => {
-                setSelectedUserNames([]);
-                setModalVisible(!modalVisible);
-              }}>
+              onPress={handleClose}>
               <Ionicons name="close-circle" size={30} />
             </TouchableOpacity>
 
             <View className="pt-8 gap-6">
-              <Text className="text-3xl">Dodaj obowiązek</Text>
+              <Text className="text-3xl">
+                {mode === 'edit' ? 'Edytuj obowiązek' : 'Dodaj obowiązek'}
+              </Text>
 
               <ScrollView>
                 <View className="gap-4">
@@ -141,13 +172,15 @@ export default function AddChore() {
 
                   <TouchableOpacity
                     className={`self-end w-fit p-3 rounded-lg mt-6 ${isLoading === true ? "bg-blue-600/30" : "bg-blue-600"}`}
-                    onPress={handleAddChore}
+                    onPress={handleSubmit}
                     disabled={isLoading}
                   >
                     {isLoading ? (
                       <ActivityIndicator color="white" />
                     ) : (
-                      <Text className="text-white text-center font-semibold text-lg">Dodaj</Text>
+                      <Text className="text-white text-center font-semibold text-lg">
+                        {mode === 'edit' ? 'Zapisz' : 'Dodaj'}
+                      </Text>
                     )}
                   </TouchableOpacity>
                 </View>

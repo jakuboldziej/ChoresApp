@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router';
 import React, { useMemo, useRef, useState } from 'react';
 import { RefreshControl, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import ChoreContextMenu from './ChoreContextMenu';
+import ChoreModal from './ChoreModal';
 
 interface DisplayChoresProps {
   currentScreen?: string;
@@ -12,13 +13,15 @@ interface DisplayChoresProps {
 export default function DisplayChores({ currentScreen }: DisplayChoresProps) {
   const { user } = useSession();
 
-  const { chores, fetchData, isLoading, handleChoreFinished } = useChores();
+  const { chores, fetchData, isLoading, handleChoreFinished, handleChoreDelete } = useChores();
 
   const router = useRouter();
   const containerRef = useRef<View>(null);
 
   const [contextMenuPos, setContextMenuPos] = useState<{ x: number; y: number; choreId?: string } | undefined>();
   const [contextMenuChore, setContextMenuChore] = useState<ChoreType>();
+  const [isEditModalVisible, setIsEditModalVisible] = useState(false);
+  const [editingChore, setEditingChore] = useState<ChoreType | null>(null);
 
   const handleChorePress = (choreId: string) => {
     router.push({
@@ -28,19 +31,23 @@ export default function DisplayChores({ currentScreen }: DisplayChoresProps) {
   };
 
   const handleMarkAsComplete = async () => {
-    if (contextMenuChore && contextMenuChore._id) {
-      await handleChoreFinished(contextMenuChore._id, contextMenuChore.finished ?? false);
+    if (contextMenuChore && contextMenuChore._id && user) {
+      await handleChoreFinished(contextMenuChore._id, user.displayName);
     }
   };
 
   const handleEdit = () => {
-    if (contextMenuPos?.choreId) {
-      console.log('Edit chore:', contextMenuPos.choreId);
+    if (contextMenuChore) {
+      setEditingChore(contextMenuChore);
+      setIsEditModalVisible(true);
+      closeContextMenu();
     }
   };
 
   const handleDelete = () => {
-    console.log('Delete chore:', contextMenuPos?.choreId);
+    if (contextMenuChore && contextMenuChore._id) {
+      handleChoreDelete(contextMenuChore._id);
+    }
   };
 
   const closeContextMenu = () => {
@@ -62,12 +69,15 @@ export default function DisplayChores({ currentScreen }: DisplayChoresProps) {
   const filteredChores = useMemo(() => {
     if (!chores) return [];
 
-    if (currentScreen === "index") {
-      return chores.filter(chore => chore.finished !== true);
+    if (currentScreen === "index" && user?.displayName) {
+      return chores.filter(
+        chore => chore.finished !== true &&
+          chore.usersList.find((choreUser) => choreUser.displayName === user.displayName)
+      );
     }
 
     return chores;
-  }, [chores, currentScreen]);
+  }, [chores, currentScreen, user?.displayName]);
 
   return (
     <View ref={containerRef} style={{ flex: 1 }}>
@@ -99,13 +109,6 @@ export default function DisplayChores({ currentScreen }: DisplayChoresProps) {
             }}
           >
             <Text className='text-xl font-semibold'>{chore.title}</Text>
-            <Text
-              className='text-sm overflow-hidden'
-              numberOfLines={1}
-              ellipsizeMode="tail"
-            >
-              {chore.description}
-            </Text>
           </TouchableOpacity>
         ))}
 
@@ -121,6 +124,18 @@ export default function DisplayChores({ currentScreen }: DisplayChoresProps) {
           />
         )}
       </ScrollView>
+
+      <ChoreModal
+        isVisible={isEditModalVisible}
+        onClose={() => {
+          setIsEditModalVisible(false);
+          setEditingChore(null);
+        }}
+        mode="edit"
+        editChore={editingChore}
+      >
+        <></>
+      </ChoreModal>
     </View>
   )
 } 

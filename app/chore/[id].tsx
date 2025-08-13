@@ -1,22 +1,60 @@
 import { useChores } from '@/app/(context)/ChoresContext';
+import ChoreModal from '@/components/Chores/ChoreModal';
 import UserDisplayName from '@/components/UserDisplayName';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import React from 'react';
-import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { ActivityIndicator, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSession } from '../(context)/AuthContext';
 
 export default function ChoreDetails() {
   const { id } = useLocalSearchParams();
-  const { chores, handleChoreFinished } = useChores();
+  const { user } = useSession();
+  const { chores, handleChoreFinished, handleChoreDelete, fetchData, isLoading } = useChores();
   const router = useRouter();
+  const [localLoading, setLocalLoading] = useState(false);
+  const [fetchAttempted, setFetchAttempted] = useState(false);
+  const [isEditModalVisible, setIsEditModalVisible] = useState(false);
+
+  useEffect(() => {
+    setFetchAttempted(false);
+  }, [id]);
+
+  useEffect(() => {
+    const choreExists = chores.some(c => c._id === id);
+
+    if (!choreExists && !fetchAttempted && !isLoading && !localLoading) {
+      setLocalLoading(true);
+      setFetchAttempted(true);
+      fetchData().finally(() => setLocalLoading(false));
+    }
+  }, [id, chores, fetchData, isLoading, localLoading, fetchAttempted]);
 
   const chore = chores.find(c => c._id === id);
 
-  if (!chore) {
+  const currentUserInChore = chore && user ?
+    chore.usersList.find((choreUser) => choreUser.displayName === user.displayName) :
+    null;
+
+  if ((isLoading || localLoading) && !chore) {
     return (
       <SafeAreaView className="flex-1 bg-white p-4">
         <View className="flex-1 justify-center items-center">
-          <Text className="text-xl text-gray-600">Nie znaleziono obowiązku</Text>
+          <ActivityIndicator size="large" color="#3B82F6" />
+          <Text className="text-lg text-gray-600 mt-4">Ładowanie obowiązku...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (!chore && fetchAttempted && !isLoading && !localLoading) {
+    return (
+      <SafeAreaView className="flex-1 bg-white p-4">
+        <View className="flex-1 justify-center items-center">
+          <Text className="text-xl text-gray-600 mb-2">Nie znaleziono obowiązku</Text>
+          <Text className="text-sm text-gray-500 text-center mb-4">
+            Obowiązek mógł zostać usunięty lub nie masz do niego dostępu
+          </Text>
           <TouchableOpacity
             onPress={() => router.back()}
             className="mt-4 bg-blue-500 px-6 py-3 rounded-lg"
@@ -27,6 +65,8 @@ export default function ChoreDetails() {
       </SafeAreaView>
     );
   }
+
+  if (!chore) return null;
 
   return (
     <SafeAreaView className="flex-1 bg-white">
@@ -73,10 +113,11 @@ export default function ChoreDetails() {
             <View className="bg-white p-3 rounded-lg mb-2">
               {chore.usersList.length > 0 ? (
                 <Text className="text-gray-800">
-                  {chore.usersList.map((userId, index) => (
-                    <React.Fragment key={userId}>
+                  {chore.usersList.map((user, index) => (
+                    <React.Fragment key={user.displayName}>
                       <UserDisplayName
-                        userId={userId}
+                        userDisplayName={user.displayName}
+                        userFinished={user.finished}
                         fallback="Nieznany użytkownik"
                         loadingText="Ładowanie..."
                       />
@@ -92,27 +133,61 @@ export default function ChoreDetails() {
         </View>
 
         <View className="gap-3">
-          <TouchableOpacity
-            className="bg-blue-500 p-4 rounded-lg"
-            onPress={() => {
-              if (chore._id) {
-                handleChoreFinished(chore._id, chore.finished ?? false);
-                router.back();
-              }
-            }}
-          >
-            {chore.finished === true ? (
-              <Text className="text-white font-semibold text-center">Odznacz wykonanie</Text>
-            ) : (
-              <Text className="text-white font-semibold text-center">Oznacz jako wykonane</Text>
-            )}
-          </TouchableOpacity>
+          {user && currentUserInChore && (
+            <TouchableOpacity
+              className="bg-blue-500 p-4 rounded-lg"
+              onPress={() => {
+                if (chore._id) {
+                  handleChoreFinished(chore._id, user.displayName);
+                  router.back();
+                }
+              }}
+            >
+              {chore.finished === false ? (
+                currentUserInChore && currentUserInChore.finished === true ? (
+                  <Text className="text-white font-semibold text-center">Odznacz wykonanie</Text>
+                ) : (
+                  <Text className="text-white font-semibold text-center">Oznacz jako wykonane</Text>
+                )
+              ) : (
+                <Text className="text-white font-semibold text-center">Zadanie wykonane</Text>
+              )}
+            </TouchableOpacity>
+          )}
 
-          <TouchableOpacity className="bg-gray-500 p-4 rounded-lg">
-            <Text className="text-white font-semibold text-center">Edytuj obowiązek</Text>
-          </TouchableOpacity>
+          {user && chore.ownerId === user._id && (
+            <View className="gap-3">
+              <TouchableOpacity
+                className="bg-gray-500 p-4 rounded-lg"
+                onPress={() => setIsEditModalVisible(true)}
+              >
+                <Text className="text-white font-semibold text-center">Edytuj obowiązek</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                className="bg-red-500 p-4 rounded-lg"
+                onPress={() => {
+                  if (chore._id) {
+                    handleChoreDelete(chore._id);
+                    router.back();
+                  }
+                }}
+              >
+                <Text className="text-white font-semibold text-center">Usuń obowiązek</Text>
+              </TouchableOpacity>
+            </View>
+          )}
         </View>
       </ScrollView>
+
+      <ChoreModal
+        isVisible={isEditModalVisible}
+        onClose={() => setIsEditModalVisible(false)}
+        mode="edit"
+        editChore={chore}
+      >
+        <></>
+      </ChoreModal>
     </SafeAreaView>
   );
 }

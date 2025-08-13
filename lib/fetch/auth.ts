@@ -1,5 +1,6 @@
+import { getItemAsync } from "expo-secure-store";
 import { Alert } from "react-native";
-import { LoginResponse, User } from "../auth";
+import { LoginResponse, parseAuthToken, User } from "../auth";
 import { apiUrl } from "../constants";
 import { getUser } from "./users";
 
@@ -20,10 +21,8 @@ export const testConnection = async (): Promise<boolean> => {
 };
 
 export const login = async (displayName: string, password: string) => {
-  const loginEndpoint = `${apiUrl}/auth/login`;
-  
   try {
-    const response = await fetch(loginEndpoint, {
+    const response = await fetch(`${apiUrl}/auth/login`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json"
@@ -46,9 +45,8 @@ export const login = async (displayName: string, password: string) => {
     const userResponse = await getUser(displayName);
 
     if (!userResponse) throw new Error("Błąd autoryzacji");
-
-    if (!userResponse) throw new Error(userResponse?.message || 'Błąd autoryzacji');
-
+    if (userResponse && (userResponse as any).message) throw new Error((userResponse as any).message);
+    
     return {
       ...data,
       user: userResponse as User
@@ -71,3 +69,27 @@ export const login = async (displayName: string, password: string) => {
     }
   }
 };
+
+export const saveExpoToken = async (userId: string, pushToken: string) => {
+    const sessionString = await getItemAsync("session");
+    const session = sessionString ? parseAuthToken(sessionString) : null;
+
+  try {
+    const response = await fetch(`${apiUrl}/chores/users/save-expo-token`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        "Authorization": session && typeof session.token === "string" ? session.token : "",
+      },
+      body: JSON.stringify({
+        userId,
+        pushToken
+      })
+    });
+
+    return await response.json();
+  } catch (error) {
+    console.error('Saving token failed:', error);
+    return;
+  }
+}

@@ -3,12 +3,16 @@ import React, { useEffect, useState } from 'react';
 import { Text, TextProps } from 'react-native';
 
 interface UserDisplayNameProps extends TextProps {
-  userId: string;
+  userDisplayName?: string;
+  userFinished?: boolean;
+  userId?: string;
   fallback?: string;
   loadingText?: string;
 }
 
 export default function UserDisplayName({
+  userDisplayName,
+  userFinished,
   userId,
   fallback,
   loadingText = "Loading...",
@@ -17,22 +21,37 @@ export default function UserDisplayName({
   const { getUserDisplayName, isLoading, getCachedUser } = useUsersCache();
   const [displayName, setDisplayName] = useState<string>('');
 
+  const identifier = userDisplayName || userId;
+
   useEffect(() => {
-    // Check if user is already cached
-    const cachedUser = getCachedUser(userId);
-    if (cachedUser !== undefined) {
-      setDisplayName(cachedUser?.displayName || fallback || userId);
+    if (!identifier) {
+      setDisplayName(fallback || 'Unknown User');
       return;
     }
 
-    // Fetch user display name
-    getUserDisplayName(userId).then(name => {
+    if (userDisplayName) {
+      setDisplayName(userDisplayName);
+      return;
+    }
+
+    const cachedUser = getCachedUser(identifier);
+    if (cachedUser !== undefined) {
+      setDisplayName(cachedUser?.displayName || fallback || identifier);
+      return;
+    }
+
+    getUserDisplayName(identifier).then(name => {
       setDisplayName(name);
     });
-  }, [userId, getUserDisplayName, getCachedUser, fallback]);
+  }, [identifier, userDisplayName, getUserDisplayName, getCachedUser, fallback]);
 
-  const isCurrentlyLoading = isLoading(userId);
-  const text = isCurrentlyLoading ? loadingText : displayName || fallback || userId;
+  const isCurrentlyLoading = isLoading(identifier || '');
+  const text = isCurrentlyLoading ? loadingText : displayName || fallback || identifier || 'Unknown User';
 
-  return <Text {...textProps}>{text}</Text>;
+  return <Text
+    {...textProps}
+    className={userFinished === true ? "text-green-500" : undefined}
+  >
+    {text}
+  </Text>;
 }
