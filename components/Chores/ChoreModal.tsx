@@ -1,10 +1,13 @@
 import { useSession } from "@/app/(context)/AuthContext";
 import { ChoreType, useChores } from "@/app/(context)/ChoresContext";
+import CheckboxItem from "@/components/CheckboxItem";
 import { patchChore, postChore } from "@/lib/fetch/chores";
+import { calculateNextDueDate, validateIntervalData } from "@/lib/intervalUtils";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { PropsWithChildren, useEffect, useRef, useState } from "react";
 import { ActivityIndicator, Alert, Modal, ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import IntervalSelector, { IntervalType } from "./IntervalSelector";
 import UserSelector from "./UserSelector";
 
 interface ChoreModalProps extends PropsWithChildren {
@@ -22,6 +25,9 @@ export default function ChoreModal({ children, isVisible, onClose, editChore, mo
 
   const [inputTitle, setInputTitle] = useState("");
   const [inputDescription, setInputDescription] = useState("");
+  const [inputRepeatable, setInputRepeatable] = useState<boolean>(false);
+  const [selectedInterval, setSelectedInterval] = useState<IntervalType | null>(null);
+  const [customDays, setCustomDays] = useState<number>(1);
   const [selectedUserNames, setSelectedUserNames] = useState<string[]>([]);
 
   useEffect(() => {
@@ -29,10 +35,17 @@ export default function ChoreModal({ children, isVisible, onClose, editChore, mo
       setInputTitle(editChore.title);
       setInputDescription(editChore.description || "");
       setSelectedUserNames(editChore.usersList.map(user => user.displayName));
+
+      setInputRepeatable(editChore.isRepeatable || false);
+      setSelectedInterval(editChore.intervalType || null);
+      setCustomDays(editChore.customDays || 1);
     } else {
       setInputTitle("");
       setInputDescription("");
       setSelectedUserNames(user?.displayName ? [user.displayName] : []);
+      setInputRepeatable(false);
+      setSelectedInterval(null);
+      setCustomDays(1);
     }
   }, [mode, editChore, user?.displayName, isVisible]);
 
@@ -67,11 +80,32 @@ export default function ChoreModal({ children, isVisible, onClose, editChore, mo
         return;
       }
 
+      const intervalValidation = validateIntervalData({
+        isRepeatable: inputRepeatable,
+        intervalType: selectedInterval || undefined,
+        customDays: customDays
+      });
+
+      if (!intervalValidation.isValid) {
+        Alert.alert("Błąd", intervalValidation.error);
+        return;
+      }
+
+      const nextDueDate = inputRepeatable && selectedInterval
+        ? calculateNextDueDate(selectedInterval, customDays)
+        : undefined;
+
       const choreData = {
         ownerId: user._id,
         usersList: selectedUserNames.map(name => ({ displayName: name, finished: false })),
         title: inputTitle,
-        description: inputDescription
+        description: inputDescription,
+        isRepeatable: inputRepeatable,
+        ...(inputRepeatable && selectedInterval && {
+          intervalType: selectedInterval,
+          ...(selectedInterval === 'custom' && { customDays }),
+          nextDueDate: nextDueDate?.toISOString()
+        })
       };
 
       let response;
@@ -100,6 +134,9 @@ export default function ChoreModal({ children, isVisible, onClose, editChore, mo
       setInputTitle("");
       setInputDescription("");
       setSelectedUserNames([]);
+      setInputRepeatable(false);
+      setSelectedInterval(null);
+      setCustomDays(1);
       onClose();
     } catch (error) {
       console.error(error);
@@ -115,6 +152,9 @@ export default function ChoreModal({ children, isVisible, onClose, editChore, mo
     setInputTitle("");
     setInputDescription("");
     setSelectedUserNames([]);
+    setInputRepeatable(false);
+    setSelectedInterval(null);
+    setCustomDays(1);
     onClose();
   };
 
@@ -142,7 +182,7 @@ export default function ChoreModal({ children, isVisible, onClose, editChore, mo
               </Text>
 
               <ScrollView>
-                <View className="gap-4">
+                <View className="gap-4 pb-12">
                   <View>
                     <Text className="text font-medium text-gray-700 mb-2">Tytuł</Text>
                     <TextInput
@@ -153,6 +193,7 @@ export default function ChoreModal({ children, isVisible, onClose, editChore, mo
                       onSubmitEditing={() => inputDescriptionRef.current?.focus()}
                     />
                   </View>
+
                   <View>
                     <Text className="text font-medium text-gray-700 mb-2">Opis</Text>
                     <TextInput
@@ -165,10 +206,26 @@ export default function ChoreModal({ children, isVisible, onClose, editChore, mo
                     />
                   </View>
 
-                  <UserSelector
-                    selectedUserNames={selectedUserNames}
-                    onToggleUser={toggleUserSelection}
+                  <CheckboxItem
+                    label="Powtarzalne?"
+                    isSelected={inputRepeatable}
+                    onPress={() => setInputRepeatable(prev => !prev)}
+                    checkboxClassName={!inputRepeatable ? 'border-black' : ''}
                   />
+
+                  {!inputRepeatable ? (
+                    <UserSelector
+                      selectedUserNames={selectedUserNames}
+                      onToggleUser={toggleUserSelection}
+                    />
+                  ) : (
+                    <IntervalSelector
+                      selectedInterval={selectedInterval}
+                      onSelectInterval={setSelectedInterval}
+                      customDays={customDays}
+                      onCustomDaysChange={setCustomDays}
+                    />
+                  )}
 
                   <TouchableOpacity
                     className={`self-end w-fit p-3 rounded-lg mt-6 ${isLoading === true ? "bg-blue-600/30" : "bg-blue-600"}`}

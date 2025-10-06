@@ -1,8 +1,8 @@
 import { useSession } from '@/app/(context)/AuthContext';
 import { useFriends } from '@/app/(context)/FriendsContext';
-import Ionicons from '@expo/vector-icons/Ionicons';
+import CheckboxItem from '@/components/CheckboxItem';
 import React from 'react';
-import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { ScrollView, Text, View } from 'react-native';
 
 interface UserOption {
   label: string;
@@ -50,23 +50,12 @@ export default function UserSelector({ selectedUserNames, onToggleUser }: UserSe
           contentContainerStyle={{ padding: 8 }}
         >
           {availableUsers.map((userOption) => (
-            <TouchableOpacity
+            <CheckboxItem
               key={userOption.value}
+              label={userOption.label}
+              isSelected={selectedUserNames.includes(userOption.label)}
               onPress={() => onToggleUser(userOption.label)}
-              className="flex-row items-center py-2 px-2 active:bg-gray-100"
-            >
-              <View className={`w-5 h-5 border-2 rounded mr-3 items-center justify-center ${selectedUserNames.includes(userOption.label)
-                ? 'bg-blue-500 border-blue-500'
-                : 'border-gray-300'
-                }`}>
-                {selectedUserNames.includes(userOption.label) && (
-                  <Ionicons name="checkmark" size={14} color="white" />
-                )}
-              </View>
-              <Text className="text-gray-900 flex-1" numberOfLines={1}>
-                {userOption.label}
-              </Text>
-            </TouchableOpacity>
+            />
           ))}
 
           {availableUsers.length === 0 && (

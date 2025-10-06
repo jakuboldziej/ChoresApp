@@ -38,6 +38,15 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
+        name="daily-chores"
+        options={{
+          title: 'Dzienne obowiązki',
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons name={focused ? 'today' : 'today-outline'} color={color} size={24} />
+          ),
+        }}
+      />
+      <Tabs.Screen
         name="profile"
         options={{
           title: 'Profil',

@@ -14,6 +14,12 @@ export interface ChoreType {
   finished?: boolean;
   createdAt?: string;
   updatedAt?: string;
+  // Interval/repeatable properties
+  isRepeatable?: boolean;
+  intervalType?: 'daily' | 'weekly' | 'monthly' | 'custom';
+  customDays?: number;
+  nextDueDate?: string;
+  lastCompletedDate?: string;
 }
 
 export interface ChoreTypeFilters {
