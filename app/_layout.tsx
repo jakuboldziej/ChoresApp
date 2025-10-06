@@ -1,9 +1,10 @@
+import '../global.css';
+
 import { setNotificationHandler } from 'expo-notifications';
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from "react-native-safe-area-context";
-import "../global.css";
 import { SessionProvider } from "./(context)/AuthContext";
 import { ChoresProvider } from "./(context)/ChoresContext";
 import { FriendsProvider } from "./(context)/FriendsContext";

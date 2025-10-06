@@ -63,7 +63,7 @@ export default function ChoreModal({ children, isVisible, onClose, editChore, mo
       }
 
       if (selectedUserNames.length === 0) {
-        Alert.alert("Błąd", "Wypełnij przynajmniej jednego użytkownika.");
+        Alert.alert("Błąd", "Przypisz przynajmniej jednego użytkownika.");
         return;
       }
 

@@ -3,6 +3,9 @@ import * as Device from 'expo-device';
 import { AndroidImportance, getExpoPushTokenAsync, getPermissionsAsync, requestPermissionsAsync, SchedulableTriggerInputTypes, scheduleNotificationAsync, setNotificationCategoryAsync, setNotificationChannelAsync } from "expo-notifications";
 import { Platform } from "react-native";
 
+// Check if running in Expo Go
+const isExpoGo = Constants.expoConfig?.slug && Constants.expoConfig?.slug === 'choresapp';
+
 export const schedulePushNotification = async (title: string, body: string, data: Record<string, unknown>) => {
   await scheduleNotificationAsync({
     content: {
@@ -19,6 +22,11 @@ export const schedulePushNotification = async (title: string, body: string, data
 
 export const registerForPushNotificationsAsync = async (userId: string) =>  {
   let token;
+
+  if (isExpoGo) {
+    console.log('Skipping push notifications setup in Expo Go');
+    return null;
+  }
 
   if (Platform.OS === 'android') {
     await setNotificationChannelAsync('myNotificationChannel', {

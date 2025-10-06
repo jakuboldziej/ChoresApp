@@ -130,18 +130,23 @@ export default function ChoreDetails() {
               )}
             </View>
           </View>
+
+          <Text className='text-sm self-end text-slate-500'>
+            Stworzono: {chore.createdAt && new Date(chore.createdAt).toLocaleString()}
+          </Text>
         </View>
 
         <View className="gap-3">
           {user && currentUserInChore && (
             <TouchableOpacity
-              className="bg-blue-500 p-4 rounded-lg"
+              className={`p-4 rounded-lg ${chore.finished === true ? "bg-blue-500/50" : "bg-blue-500"}`}
               onPress={() => {
                 if (chore._id) {
                   handleChoreFinished(chore._id, user.displayName);
                   router.back();
                 }
               }}
+              disabled={chore.finished === true}
             >
               {chore.finished === false ? (
                 currentUserInChore && currentUserInChore.finished === true ? (
@@ -166,10 +171,9 @@ export default function ChoreDetails() {
 
               <TouchableOpacity
                 className="bg-red-500 p-4 rounded-lg"
-                onPress={() => {
+                onPress={async () => {
                   if (chore._id) {
-                    handleChoreDelete(chore._id);
-                    router.back();
+                    handleChoreDelete(chore._id, true);
                   }
                 }}
               >

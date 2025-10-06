@@ -1,5 +1,6 @@
 import { parseAuthToken } from "@/lib/auth";
 import { deleteChore, getChores, patchChore } from "@/lib/fetch/chores";
+import { router } from "expo-router";
 import { createContext, PropsWithChildren, use, useCallback, useEffect, useReducer, useState } from "react";
 import { Alert } from "react-native";
 import { useSession } from "./AuthContext";
@@ -11,6 +12,8 @@ export interface ChoreType {
   title: string;
   description: string;
   finished?: boolean;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface ChoreTypeFilters {
@@ -34,7 +37,7 @@ interface ChoresContextTypes {
   dispatchChore: React.Dispatch<ChoreAction>;
   fetchData: (filters?: ChoreTypeFilters) => Promise<void>;
   handleChoreFinished: (choreId: string, userDisplayName: string) => Promise<void>;
-  handleChoreDelete: (choreId: string) => Promise<void>;
+  handleChoreDelete: (choreId: string, redirect: boolean) => Promise<void>;
 }
 
 const ChoresContext = createContext<ChoresContextTypes>({
@@ -121,6 +124,8 @@ export function ChoresProvider({ children }: PropsWithChildren) {
         return;
       }
 
+      console.log(response)
+
       dispatch({ type: "update", updatedChore: response });
     } catch (error) {
       console.error(error);
@@ -130,33 +135,51 @@ export function ChoresProvider({ children }: PropsWithChildren) {
     }
   };
 
-  const handleChoreDelete = async (choreId: string) => {
+  const handleChoreDelete = async (choreId: string, redirect: boolean): Promise<void> => {
     if (!choreId) {
-      Alert.alert("Błąd", "Nie znaleziono obowiązku do oznaczenia jako wykonane.");
+      Alert.alert("Błąd", "Nie znaleziono obowiązku do usunięcia.");
       return;
     }
 
-    try {
-      if (!choreId) throw new Error("Brak identyfikatora obowiązku.");
-      const response = await deleteChore(choreId);
+    Alert.alert(
+      "Potwierdź usunięcie",
+      "Czy na pewno chcesz usunąć to zadanie? Ta operacja nie może być cofnięta.",
+      [
+        {
+          text: "Anuluj",
+          style: "cancel"
+        },
+        {
+          text: "Usuń",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              if (!choreId) throw new Error("Brak identyfikatora obowiązku.");
+              const response = await deleteChore(choreId);
 
-      if (!response) {
-        Alert.alert("Błąd", "Nie udało się zaktualizować obowiązku.");
-        return;
-      }
+              if (!response) {
+                Alert.alert("Błąd", "Nie udało się usunąć obowiązku.");
+                return;
+              }
 
-      if ('message' in response) {
-        Alert.alert("Błąd", response.message);
-        return;
-      }
+              if ('message' in response) {
+                Alert.alert("Błąd", response.message);
+                return;
+              }
 
-      dispatch({ type: "delete", deletedChoreId: choreId });
-    } catch (error) {
-      console.error(error);
-      if (error instanceof TypeError) {
-        Alert.alert("Błąd", error.message);
-      }
-    }
+              dispatch({ type: "delete", deletedChoreId: choreId });
+              if (redirect) router.back();
+              return;
+            } catch (error) {
+              console.error(error);
+              if (error instanceof TypeError) {
+                Alert.alert("Błąd", error.message);
+              }
+            }
+          }
+        }
+      ]
+    );
   }
 
   const fetchData = useCallback(async (filters?: ChoreTypeFilters) => {
