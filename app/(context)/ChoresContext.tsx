@@ -1,4 +1,5 @@
 import { parseAuthToken } from "@/lib/auth";
+import { findChoreUser } from "@/lib/choreUtils";
 import { deleteChore, getChores, patchChore } from "@/lib/fetch/chores";
 import { router } from "expo-router";
 import { createContext, PropsWithChildren, use, useCallback, useEffect, useReducer, useState } from "react";
@@ -103,7 +104,7 @@ export function ChoresProvider({ children }: PropsWithChildren) {
 
       if (!foundChore) throw new Error("Nie znaleziono obowiązku.");
 
-      const foundChoreUser = foundChore.usersList.find((choreUser) => choreUser.displayName === userDisplayName);
+      const foundChoreUser = findChoreUser(foundChore, userDisplayName);
 
       if (!foundChoreUser) throw new Error("Nie znaleziono użytkownika obowiązku.");
 
@@ -113,7 +114,7 @@ export function ChoresProvider({ children }: PropsWithChildren) {
         }
 
         return choreUser;
-      })
+      });
 
       const response = await patchChore({
         _id: choreId,

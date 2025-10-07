@@ -27,8 +27,8 @@ export default function CheckboxItem({
       <View
         className={`w-5 h-5 border-2 rounded mr-3 items-center justify-center ${isSelected
           ? 'bg-blue-500 border-blue-500'
-          : 'border-gray-300'
-          } ${checkboxClassName}`}
+          : checkboxClassName || 'border-gray-300'
+          }`}
       >
         {isSelected && (
           <Ionicons name="checkmark" size={14} color="white" />

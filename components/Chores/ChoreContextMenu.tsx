@@ -1,4 +1,6 @@
+import { useSession } from '@/app/(context)/AuthContext';
 import { ChoreType } from '@/app/(context)/ChoresContext';
+import { isChoreFinishedByUser } from '@/lib/choreUtils';
 import React from 'react';
 import { Dimensions, Pressable, Text, View } from 'react-native';
 
@@ -6,13 +8,23 @@ interface ChoreContextMenuProps {
   x: number;
   y: number;
   contextMenuChore: ChoreType;
-  onMarkAsComplete?: () => void;
+  onMarkCompletion?: () => void;
   onEdit?: () => void;
   onDelete?: () => void;
   onClose?: () => void;
 }
 
-export default function ChoreContextMenu({ x, y, onMarkAsComplete, onEdit, onDelete, onClose }: ChoreContextMenuProps) {
+export default function ChoreContextMenu({
+  x,
+  y,
+  contextMenuChore,
+  onMarkCompletion: onMarkAsComplete,
+  onEdit,
+  onDelete,
+  onClose
+}: ChoreContextMenuProps) {
+  const { user } = useSession();
+
   const screenWidth = Dimensions.get('window').width;
   const screenHeight = Dimensions.get('window').height;
 
@@ -58,7 +70,9 @@ export default function ChoreContextMenu({ x, y, onMarkAsComplete, onEdit, onDel
           onMarkAsComplete && handleAction(onMarkAsComplete);
         }}
       >
-        <Text className="text-base text-gray-800 text-center">Oznacz jako wykonane</Text>
+        <Text className="text-base text-gray-800 text-center">
+          Oznacz jako{user && isChoreFinishedByUser(contextMenuChore, user.displayName) && " nie"} wykonane
+        </Text>
       </Pressable>
 
       <View className="h-px bg-gray-300 mx-2" />

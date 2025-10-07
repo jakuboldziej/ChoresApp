@@ -75,7 +75,7 @@ export default function ChoreModal({ children, isVisible, onClose, editChore, mo
         return;
       }
 
-      if (selectedUserNames.length === 0) {
+      if (selectedUserNames.length === 0 && inputRepeatable === false) {
         Alert.alert("Błąd", "Przypisz przynajmniej jednego użytkownika.");
         return;
       }
@@ -95,9 +95,17 @@ export default function ChoreModal({ children, isVisible, onClose, editChore, mo
         ? calculateNextDueDate(selectedInterval, customDays)
         : undefined;
 
+      let usersList: { displayName: string; finished: boolean; }[] = [];
+
+      if (inputRepeatable === false) {
+        usersList = selectedUserNames.map(name => ({ displayName: name, finished: false }));
+      } else {
+        usersList = [{ displayName: user.displayName, finished: false }];
+      }
+
       const choreData = {
         ownerId: user._id,
-        usersList: selectedUserNames.map(name => ({ displayName: name, finished: false })),
+        usersList: usersList,
         title: inputTitle,
         description: inputDescription,
         isRepeatable: inputRepeatable,

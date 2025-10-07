@@ -1,5 +1,6 @@
 import { useSession } from '@/app/(context)/AuthContext';
 import { ChoreType, useChores } from '@/app/(context)/ChoresContext';
+import { isChoreUnfinishedByUser } from '@/lib/choreUtils';
 import { useRouter } from 'expo-router';
 import React, { useMemo, useRef, useState } from 'react';
 import { RefreshControl, ScrollView, Text, TouchableOpacity, View } from 'react-native';
@@ -30,7 +31,7 @@ export default function DisplayChores({ currentScreen }: DisplayChoresProps) {
     });
   };
 
-  const handleMarkAsComplete = async () => {
+  const handleMarkCompletion = async () => {
     if (contextMenuChore && contextMenuChore._id && user) {
       await handleChoreFinished(contextMenuChore._id, user.displayName);
     }
@@ -46,7 +47,7 @@ export default function DisplayChores({ currentScreen }: DisplayChoresProps) {
 
   const handleDelete = () => {
     if (contextMenuChore && contextMenuChore._id) {
-      handleChoreDelete(contextMenuChore._id);
+      handleChoreDelete(contextMenuChore._id, false);
     }
   };
 
@@ -71,8 +72,7 @@ export default function DisplayChores({ currentScreen }: DisplayChoresProps) {
 
     if (currentScreen === "index" && user?.displayName) {
       return chores.filter(
-        chore => chore.finished !== true &&
-          chore.usersList.find((choreUser) => choreUser.displayName === user.displayName)
+        chore => isChoreUnfinishedByUser(chore, user.displayName)
       );
     }
 
@@ -93,7 +93,7 @@ export default function DisplayChores({ currentScreen }: DisplayChoresProps) {
           <TouchableOpacity
             key={chore._id}
             style={{ elevation: 5 }}
-            className={`w-full p-4 rounded-xl mb-3 ${chore.finished === true ? "bg-yellow-400" : "bg-cyan-200"}`}
+            className={`w-full p-4 rounded-xl mb-3 ${chore.finished === true ? "bg-green-400" : "bg-cyan-200"}`}
             onPress={() => chore._id && handleChorePress(chore._id)}
             onLongPress={(e) => {
               const { pageX, pageY } = e.nativeEvent;
@@ -117,7 +117,7 @@ export default function DisplayChores({ currentScreen }: DisplayChoresProps) {
             x={contextMenuPos.x}
             y={contextMenuPos.y}
             contextMenuChore={contextMenuChore}
-            onMarkAsComplete={handleMarkAsComplete}
+            onMarkCompletion={handleMarkCompletion}
             onEdit={handleEdit}
             onDelete={handleDelete}
             onClose={closeContextMenu}

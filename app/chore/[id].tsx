@@ -1,6 +1,7 @@
 import { useChores } from '@/app/(context)/ChoresContext';
 import ChoreModal from '@/components/Chores/ChoreModal';
 import UserDisplayName from '@/components/UserDisplayName';
+import { findChoreUser } from '@/lib/choreUtils';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, ScrollView, Text, TouchableOpacity, View } from 'react-native';
@@ -33,7 +34,7 @@ export default function ChoreDetails() {
   const chore = chores.find(c => c._id === id);
 
   const currentUserInChore = chore && user ?
-    chore.usersList.find((choreUser) => choreUser.displayName === user.displayName) :
+    findChoreUser(chore, user.displayName) :
     null;
 
   if ((isLoading || localLoading) && !chore) {
@@ -84,7 +85,7 @@ export default function ChoreDetails() {
         className="flex-1 p-4"
         contentContainerStyle={{ flexGrow: 1, justifyContent: "space-between" }}
       >
-        <View className={`p-6 rounded-xl mb-6 ${chore.finished === true ? "bg-yellow-400" : "bg-cyan-200"}`}>
+        <View className={`p-6 rounded-xl mb-6 ${chore.finished === true ? "bg-green-400" : "bg-cyan-200"}`}>
           <Text className="text-2xl font-bold text-gray-800 mb-4">
             {chore.title}
           </Text>
@@ -132,7 +133,7 @@ export default function ChoreDetails() {
           </View>
 
           <Text className='text-sm self-end text-slate-500'>
-            Stworzono: {chore.createdAt && new Date(chore.createdAt).toLocaleString()}
+            Utworzono: {chore.createdAt && new Date(chore.createdAt).toLocaleString()}
           </Text>
         </View>
 
@@ -146,16 +147,11 @@ export default function ChoreDetails() {
                   router.back();
                 }
               }}
-              disabled={chore.finished === true}
             >
-              {chore.finished === false ? (
-                currentUserInChore && currentUserInChore.finished === true ? (
-                  <Text className="text-white font-semibold text-center">Odznacz wykonanie</Text>
-                ) : (
-                  <Text className="text-white font-semibold text-center">Oznacz jako wykonane</Text>
-                )
+              {currentUserInChore && currentUserInChore.finished === true ? (
+                <Text className="text-white font-semibold text-center">Odznacz wykonanie</Text>
               ) : (
-                <Text className="text-white font-semibold text-center">Zadanie wykonane</Text>
+                <Text className="text-white font-semibold text-center">Oznacz jako wykonane</Text>
               )}
             </TouchableOpacity>
           )}
