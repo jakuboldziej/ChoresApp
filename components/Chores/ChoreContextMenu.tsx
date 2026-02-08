@@ -9,6 +9,7 @@ interface ChoreContextMenuProps {
   y: number;
   contextMenuChore: ChoreType;
   onMarkCompletion?: () => void;
+  onOpenChore?: () => void;
   onEdit?: () => void;
   onDelete?: () => void;
   onClose?: () => void;
@@ -19,6 +20,7 @@ export default function ChoreContextMenu({
   y,
   contextMenuChore,
   onMarkCompletion: onMarkAsComplete,
+  onOpenChore,
   onEdit,
   onDelete,
   onClose
@@ -53,7 +55,9 @@ export default function ChoreContextMenu({
       style={{
         top: adjustedY,
         left: adjustedX,
-        elevation: 5, // Android shadow
+        position: "absolute",
+        zIndex: 9999,
+        elevation: 10, // Android shadow
         shadowColor: '#000', // iOS shadow
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.25,
@@ -63,6 +67,20 @@ export default function ChoreContextMenu({
         e.stopPropagation();
       }}
     >
+      <Pressable
+        className="py-3 px-4 rounded active:bg-gray-100"
+        onPress={(e) => {
+          e.stopPropagation();
+          onOpenChore && onOpenChore();
+        }}
+      >
+        <Text className="text-base text-gray-800 text-center">
+          Szczegóły
+        </Text>
+      </Pressable>
+
+      <View className="h-px bg-gray-300 mx-2" />
+
       <Pressable
         className="py-3 px-4 rounded active:bg-gray-100"
         onPress={(e) => {

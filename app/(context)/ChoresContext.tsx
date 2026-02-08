@@ -131,8 +131,6 @@ export function ChoresProvider({ children }: PropsWithChildren) {
         return;
       }
 
-      console.log(response)
-
       dispatch({ type: "update", updatedChore: response });
     } catch (error) {
       console.error(error);

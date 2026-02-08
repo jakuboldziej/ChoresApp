@@ -15,9 +15,10 @@ interface ChoreModalProps extends PropsWithChildren {
   onClose: () => void;
   editChore?: ChoreType | null;
   mode?: 'add' | 'edit';
+  currentScreen?: "index" | "chores-screen" | "chores-daily";
 }
 
-export default function ChoreModal({ children, isVisible, onClose, editChore, mode = 'add' }: ChoreModalProps) {
+export default function ChoreModal({ children, isVisible, onClose, editChore, mode = 'add', currentScreen = "index" }: ChoreModalProps) {
   const { user } = useSession();
   const { dispatchChore } = useChores();
 
@@ -39,15 +40,15 @@ export default function ChoreModal({ children, isVisible, onClose, editChore, mo
       setInputRepeatable(editChore.isRepeatable || false);
       setSelectedInterval(editChore.intervalType || null);
       setCustomDays(editChore.customDays || 1);
-    } else {
+    } else if (mode === "add") {
       setInputTitle("");
       setInputDescription("");
       setSelectedUserNames(user?.displayName ? [user.displayName] : []);
-      setInputRepeatable(false);
-      setSelectedInterval(null);
+      setInputRepeatable(currentScreen === "chores-daily" ? true : false);
+      setSelectedInterval(currentScreen === "chores-daily" ? "daily" : null);
       setCustomDays(1);
     }
-  }, [mode, editChore, user?.displayName, isVisible]);
+  }, [mode, editChore, user?.displayName, isVisible, currentScreen]);
 
   const toggleUserSelection = (userName: string) => {
     setSelectedUserNames(prev => {

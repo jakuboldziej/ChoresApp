@@ -59,6 +59,7 @@ export default function Index() {
           isVisible={isModalVisible}
           onClose={() => setIsModalVisible(false)}
           mode="add"
+          currentScreen="index"
         >
           <TouchableOpacity
             className="self-center bg-blue-600 p-3 rounded-lg mt-4"

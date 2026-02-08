@@ -79,12 +79,6 @@ export default function IntervalSelector({
           ))}
         </ScrollView>
       </View>
-
-      {selectedInterval && (
-        <Text className="text-xs text-gray-500 mt-1">
-          Wybrano: {intervalOptions.find(opt => opt.type === selectedInterval)?.label}
-        </Text>
-      )}
     </View>
   );
 }
