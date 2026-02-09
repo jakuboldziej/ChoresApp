@@ -19,7 +19,15 @@
       }
     },
     "production": {
-      "autoIncrement": true
+      "android": {
+        "image": "latest",
+        "buildType": "apk",
+        "credentialsSource": "remote"
+      },
+      "ios": {
+        "image": "latest"
+      },
+      "channel": "production"
     }
   },
   "submit": {
