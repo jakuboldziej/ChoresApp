@@ -2,6 +2,7 @@ import { useChores } from '@/app/(context)/ChoresContext';
 import ChoreModal from '@/components/Chores/ChoreModal';
 import UserDisplayName from '@/components/UserDisplayName';
 import { findChoreUser } from '@/lib/choreUtils';
+import { formatIntervalDisplay } from '@/lib/intervalUtils';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, ScrollView, Text, TouchableOpacity, View } from 'react-native';
@@ -32,6 +33,12 @@ export default function ChoreDetails() {
   }, [id, chores, fetchData, isLoading, localLoading, fetchAttempted]);
 
   const chore = chores.find(c => c._id === id);
+
+  const intervalLabel = formatIntervalDisplay({
+    isRepeatable: chore?.isRepeatable || false,
+    intervalType: chore?.intervalType,
+    customDays: chore?.customDays
+  });
 
   const currentUserInChore = chore && user ?
     findChoreUser(chore, user.displayName) :
@@ -86,51 +93,57 @@ export default function ChoreDetails() {
         contentContainerStyle={{ flexGrow: 1, justifyContent: "space-between" }}
       >
         <View className={`p-6 rounded-xl mb-6 ${chore.finished === true ? "bg-green-400" : "bg-cyan-200"}`}>
-          <Text className="text-2xl font-bold text-gray-800 mb-4">
-            {chore.title}
-          </Text>
+          <View className="mb-6">
+            <Text className="text-3xl font-bold text-gray-800">{chore.title}</Text>
 
-          <View className="mb-4">
-            <Text className="text-sm font-semibold text-gray-600 mb-2">Opis:</Text>
-            <Text className="text-base text-gray-800 leading-6">
-              {chore.description || "Brak"}
-            </Text>
-          </View>
+            {/* Frequency Badge */}
+            <View className="flex-row items-center mt-2">
+              <View className="bg-blue-100 px-3 py-1 rounded-full">
+                <Text className="text-blue-700 font-medium">{intervalLabel}</Text>
+              </View>
 
-          <View className="mb-4">
-            <Text className="text-sm font-semibold text-gray-600 mb-2">Twórca:</Text>
-            <UserDisplayName
-              userId={chore.ownerId}
-              className="text-base text-gray-800"
-              fallback="Nieznany użytkownik"
-              loadingText="Ładowanie..."
-            />
-          </View>
-
-          <View className="mb-4">
-            <Text className="text-sm font-semibold text-gray-600 mb-2">
-              Przypisani użytkownicy ({chore.usersList.length}):
-            </Text>
-            <View className="bg-white p-3 rounded-lg mb-2">
-              {chore.usersList.length > 0 ? (
-                <Text className="text-gray-800">
-                  {chore.usersList.map((user, index) => (
-                    <React.Fragment key={user.displayName}>
-                      <UserDisplayName
-                        userDisplayName={user.displayName}
-                        userFinished={user.finished}
-                        fallback="Nieznany użytkownik"
-                        loadingText="Ładowanie..."
-                      />
-                      {index < chore.usersList.length - 1 && ', '}
-                    </React.Fragment>
-                  ))}
+              {/* Status Badge */}
+              <View className={`ml-2 px-3 py-1 rounded-full ${chore.finished ? 'bg-green-100' : 'bg-orange-100'}`}>
+                <Text className={`font-medium ${chore.finished ? 'text-green-700' : 'text-orange-700'}`}>
+                  {chore.finished ? 'Wykonane w tym cyklu' : 'Do zrobienia'}
                 </Text>
-              ) : (
-                <Text className="text-gray-500 italic">Brak przypisanych użytkowników</Text>
-              )}
+              </View>
             </View>
           </View>
+
+          <View className="bg-gray-50 p-4 rounded-xl mb-6">
+            <Text className="text-gray-500 uppercase text-xs font-bold mb-1">Opis</Text>
+            <Text className="text-gray-700 text-lg">
+              {chore.description || "Brak opisu."}
+            </Text>
+          </View>
+
+          {chore.isRepeatable === false && (
+            <View className="mb-4">
+              <Text className="text-sm font-semibold text-gray-600 mb-2">
+                Przypisani użytkownicy ({chore.usersList.length}):
+              </Text>
+              <View className="bg-white p-3 rounded-lg mb-2">
+                {chore.usersList.length > 0 ? (
+                  <Text className="text-gray-800">
+                    {chore.usersList.map((user, index) => (
+                      <React.Fragment key={user.displayName}>
+                        <UserDisplayName
+                          userDisplayName={user.displayName}
+                          userFinished={user.finished}
+                          fallback="Nieznany użytkownik"
+                          loadingText="Ładowanie..."
+                        />
+                        {index < chore.usersList.length - 1 && ', '}
+                      </React.Fragment>
+                    ))}
+                  </Text>
+                ) : (
+                  <Text className="text-gray-500 italic">Brak przypisanych użytkowników</Text>
+                )}
+              </View>
+            </View>
+          )}
 
           <Text className='text-sm self-end text-slate-500'>
             Utworzono: {chore.createdAt && new Date(chore.createdAt).toLocaleString()}
@@ -140,7 +153,7 @@ export default function ChoreDetails() {
         <View className="gap-3">
           {user && currentUserInChore && (
             <TouchableOpacity
-              className={`p-4 rounded-lg ${chore.finished === true ? "bg-blue-500/50" : "bg-blue-500"}`}
+              className={`p-4 rounded-lg bg-blue-500`}
               onPress={() => {
                 if (chore._id) {
                   handleChoreFinished(chore._id, user.displayName);

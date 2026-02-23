@@ -1,14 +1,17 @@
 import ChoreModal from "@/components/Chores/ChoreModal";
 import DisplayChores from "@/components/Chores/DisplayChores";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { addNotificationReceivedListener, addNotificationResponseReceivedListener } from "expo-notifications";
 import { router } from "expo-router";
 import { useEffect, useState } from "react";
-import { Text, TouchableOpacity, View } from "react-native";
+import { ScrollView, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useSession } from "../(context)/AuthContext";
 import { useChores } from "../(context)/ChoresContext";
 
 export default function Index() {
   const { fetchData } = useChores();
+  const { user } = useSession();
   const [isModalVisible, setIsModalVisible] = useState(false);
 
   useEffect(() => {
@@ -51,29 +54,53 @@ export default function Index() {
   }, [fetchData]);
 
   return (
-    <SafeAreaView className="flex-1 items-center pt-10 p-2 bg-white">
-      <Text className="text-4xl font-bold text-gray-800 mb-4">Chores App</Text>
-
-      <View className="w-full gap-4 flex-1">
-        <ChoreModal
-          isVisible={isModalVisible}
-          onClose={() => setIsModalVisible(false)}
-          mode="add"
-          currentScreen="index"
-        >
-          <TouchableOpacity
-            className="self-center bg-blue-600 p-3 rounded-lg mt-4"
-            onPress={() => setIsModalVisible(true)}
-          >
-            <Text className="text-white text-center font-semibold text-lg">Dodaj obowiązek</Text>
-          </TouchableOpacity>
-        </ChoreModal>
-
-        <View className='gap-2 w-full flex-1'>
-          <Text className='text-black font-bold text-2xl'>Najnowsze obowiązki</Text>
-          <DisplayChores currentScreen="index" />
+    <SafeAreaView className="flex-1 bg-gray-50">
+      <ScrollView
+        className="flex-1 px-4"
+        contentContainerStyle={{ paddingBottom: 100 }}
+      >
+        <View className="pt-10 mb-6">
+          <Text className="text-4xl font-extrabold text-gray-900">Cześć, {user?.displayName}!</Text>
+          <Text className="text-gray-500 text-lg">Oto Twoje plany na dziś.</Text>
         </View>
-      </View>
+
+        <View className="mb-8">
+          <View className="flex-row items-center mb-4 gap-2">
+            <Ionicons name="repeat" size={24} color="#2563eb" />
+            <Text className="text-xl font-bold text-gray-800">Twoja Rutyna</Text>
+          </View>
+          <DisplayChores
+            currentScreen="index"
+            typeFilter="repeatable"
+          />
+        </View>
+
+        <View>
+          <View className="flex-row items-center mb-4 gap-2">
+            <Ionicons name="list" size={24} color="#0891b2" />
+            <Text className="text-xl font-bold text-gray-800">Zadania do zrobienia</Text>
+          </View>
+          <DisplayChores
+            currentScreen="index"
+            typeFilter="one-off"
+          />
+        </View>
+      </ScrollView>
+
+      <TouchableOpacity
+        className="absolute bottom-10 right-10 bg-blue-600 w-16 h-16 rounded-full items-center justify-center shadow-2xl"
+        onPress={() => setIsModalVisible(true)}
+        style={{ elevation: 10 }}
+      >
+        <Ionicons name="add" size={32} color="white" />
+      </TouchableOpacity>
+
+      <ChoreModal
+        isVisible={isModalVisible}
+        onClose={() => setIsModalVisible(false)}
+        mode="add"
+        currentScreen="index"
+      />
     </SafeAreaView>
   );
 }

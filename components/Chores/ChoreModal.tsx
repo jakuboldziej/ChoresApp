@@ -2,7 +2,7 @@ import { useSession } from "@/app/(context)/AuthContext";
 import { ChoreType, useChores } from "@/app/(context)/ChoresContext";
 import CheckboxItem from "@/components/CheckboxItem";
 import { patchChore, postChore } from "@/lib/fetch/chores";
-import { calculateNextDueDate, validateIntervalData } from "@/lib/intervalUtils";
+import { validateIntervalData } from "@/lib/intervalUtils";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { PropsWithChildren, useEffect, useRef, useState } from "react";
 import { ActivityIndicator, Alert, Modal, ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
@@ -92,10 +92,6 @@ export default function ChoreModal({ children, isVisible, onClose, editChore, mo
         return;
       }
 
-      const nextDueDate = inputRepeatable && selectedInterval
-        ? calculateNextDueDate(selectedInterval, customDays)
-        : undefined;
-
       let usersList: { displayName: string; finished: boolean; }[] = [];
 
       if (inputRepeatable === false) {
@@ -113,7 +109,6 @@ export default function ChoreModal({ children, isVisible, onClose, editChore, mo
         ...(inputRepeatable && selectedInterval && {
           intervalType: selectedInterval,
           ...(selectedInterval === 'custom' && { customDays }),
-          nextDueDate: nextDueDate?.toISOString()
         })
       };
 

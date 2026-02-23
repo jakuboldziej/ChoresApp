@@ -11,9 +11,10 @@ import ChoreModal from './ChoreModal';
 interface DisplayChoresProps {
   currentScreen?: "index" | "chores-screen" | "chores-daily";
   pFinished?: boolean | null;
+  typeFilter?: "repeatable" | "one-off" | "all"; // Add this prop
 }
 
-export default function DisplayChores({ currentScreen, pFinished = null }: DisplayChoresProps) {
+export default function DisplayChores({ currentScreen, pFinished = null, typeFilter }: DisplayChoresProps) {
   const { user } = useSession();
 
   const { chores, fetchData, isLoading, handleChoreFinished, handleChoreDelete } = useChores();
@@ -28,16 +29,29 @@ export default function DisplayChores({ currentScreen, pFinished = null }: Displ
 
   const openChore = () => {
     if (contextMenuChore && contextMenuChore._id && user) {
+      closeContextMenu();
+
       router.push({
         pathname: '/chore/[id]',
         params: { id: contextMenuChore._id }
       });
-    };
-  }
+    }
+  };
 
-  const handleMarkCompletion = async () => {
-    if (contextMenuChore && contextMenuChore._id && user) {
-      await handleChoreFinished(contextMenuChore._id, user.displayName);
+  const handleMarkCompletion = async (choreId: string, choreTitle: string) => {
+    if (user && user.displayName) {
+      try {
+        await handleChoreFinished(choreId, user.displayName);
+      } catch (error) {
+        console.error(`Failed to mark ${choreTitle} as complete:`, error);
+      }
+    }
+  };
+
+  const handleContextMenuMark = () => {
+    if (contextMenuChore?._id) {
+      handleMarkCompletion(contextMenuChore._id, contextMenuChore.title);
+      closeContextMenu(); // Good UX to close it after action
     }
   };
 
@@ -72,28 +86,32 @@ export default function DisplayChores({ currentScreen, pFinished = null }: Displ
   }
 
   const filteredChores = useMemo(() => {
-    if (!chores) return [];
+    if (!chores || !user?.displayName) return [];
 
-    if (!user?.displayName) return;
+    return chores.filter(chore => {
+      const isUnfinished = isChoreUnfinishedByUser(chore, user.displayName);
 
-    if (currentScreen === "index") {
-      return chores.filter(
-        chore => isChoreUnfinishedByUser(chore, user.displayName) && !chore.isRepeatable
-      );
-    } else if (currentScreen === "chores-screen") {
-      return chores.filter(
-        chore => !chore.isRepeatable
-      );
-    } else if (currentScreen === "chores-daily") {
-      let filterFinished = pFinished;
+      if (currentScreen === "index") {
+        if (!isUnfinished) return false;
 
-      return chores.filter(
-        chore => chore.isRepeatable === true && chore.finished === filterFinished
-      );
-    }
+        if (typeFilter === "repeatable") return chore.isRepeatable;
+        if (typeFilter === "one-off") return !chore.isRepeatable;
+        return true;
+      }
 
-    return chores;
-  }, [chores, currentScreen, pFinished, user?.displayName]);
+      if (currentScreen === "chores-daily") {
+        return chore.isRepeatable === true &&
+          chore.intervalType === "daily" &&
+          chore.finished === pFinished;
+      }
+
+      if (currentScreen === "chores-screen") {
+        return !chore.isRepeatable;
+      }
+
+      return true;
+    });
+  }, [chores, currentScreen, pFinished, typeFilter, user?.displayName]);
 
   return (
     <View ref={containerRef} style={{ flex: 1, position: 'relative' }}>
@@ -111,13 +129,13 @@ export default function DisplayChores({ currentScreen, pFinished = null }: Displ
             style={{ elevation: 5 }}
             className={`flex flex-row items-center gap-3 w-full p-4 rounded-xl mb-3 ${chore.finished === true ? "bg-green-200" : "bg-cyan-200"}`}
             onPress={() => {
-              setContextMenuChore(chore);
-              handleMarkCompletion();
+              if (chore._id) {
+                handleMarkCompletion(chore._id, chore.title);
+              }
             }}
             onLongPress={(e) => {
               const { pageX, pageY } = e.nativeEvent;
-
-              containerRef.current?.measureInWindow((x: number, y: number) => {
+              containerRef.current?.measureInWindow((x, y) => {
                 setContextMenuPos({
                   x: pageX - x,
                   y: pageY - y,
@@ -147,7 +165,7 @@ export default function DisplayChores({ currentScreen, pFinished = null }: Displ
           x={contextMenuPos.x}
           y={contextMenuPos.y}
           contextMenuChore={contextMenuChore}
-          onMarkCompletion={handleMarkCompletion}
+          onMarkCompletion={handleContextMenuMark}
           onOpenChore={openChore}
           onEdit={handleEdit}
           onDelete={handleDelete}

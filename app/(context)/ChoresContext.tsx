@@ -19,7 +19,7 @@ export interface ChoreType {
   isRepeatable?: boolean;
   intervalType?: 'daily' | 'weekly' | 'monthly' | 'custom';
   customDays?: number;
-  nextDueDate?: string;
+  lastResetDate?: string;
   lastCompletedDate?: string;
 }
 

@@ -44,9 +44,11 @@ export default function ChoreContextMenu({
 
   if (adjustedY < 10) adjustedY = 10;
 
-  const handleAction = (action: () => void) => {
-    action();
-    onClose?.();
+  const handleAction = (action?: () => void) => {
+    if (action) {
+      onClose?.();
+      action();
+    }
   };
 
   return (
@@ -71,7 +73,7 @@ export default function ChoreContextMenu({
         className="py-3 px-4 rounded active:bg-gray-100"
         onPress={(e) => {
           e.stopPropagation();
-          onOpenChore && onOpenChore();
+          onOpenChore && handleAction(onOpenChore);
         }}
       >
         <Text className="text-base text-gray-800 text-center">
@@ -85,7 +87,7 @@ export default function ChoreContextMenu({
         className="py-3 px-4 rounded active:bg-gray-100"
         onPress={(e) => {
           e.stopPropagation();
-          onMarkAsComplete && handleAction(onMarkAsComplete);
+          handleAction(onMarkAsComplete);
         }}
       >
         <Text className="text-base text-gray-800 text-center">
