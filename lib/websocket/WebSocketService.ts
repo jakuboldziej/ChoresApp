@@ -1,45 +1,45 @@
-import { io, Socket } from 'socket.io-client';
+import { io, Socket } from "socket.io-client";
 
 export interface WebSocketEvents {
   // Friends events
-  'sendFriendsRequest': (data: {
+  sendFriendsRequest: (data: {
     friendsRequestsReceived: number;
     currentUserDisplayName: string;
     userDisplayName: string;
   }) => void;
-  
-  'acceptFriendsRequest': (data: {
+
+  acceptFriendsRequest: (data: {
     accepted: boolean;
     sentFrom: string;
     sentTo: string;
   }) => void;
-  
-  'declineFriendsRequest': (data: {
+
+  declineFriendsRequest: (data: {
     declined: boolean;
     sentFrom: string;
     sentTo: string;
   }) => void;
-  
-  'cancelFriendsRequest': (data: {
+
+  cancelFriendsRequest: (data: {
     canceled: boolean;
     sentFrom: string;
     sentTo: string;
   }) => void;
-  
-  'removeFriend': (data: {
+
+  removeFriend: (data: {
     removed: boolean;
     removedBy: string;
     removedUser: string;
   }) => void;
-  
-  'updateCounters': (data: {
+
+  updateCounters: (data: {
     currentUserDisplayName: string;
     friendsRequestsReceived?: number;
     friendsRequestsPending?: number;
   }) => void;
-  
+
   // Online status events
-  'onlineUsersListener': (data: {
+  onlineUsersListener: (data: {
     updatedOnlineUsers: any[];
     updatedUser: {
       _id: string;
@@ -47,24 +47,23 @@ export interface WebSocketEvents {
     };
     isUserOnline: boolean;
   }) => void;
-  
+
   // Chore events
-  'choreCreated': (data: {
+  choreCreated: (data: {
     choreId: string;
     title: string;
     assignedUsers: string[];
   }) => void;
-  
-  'choreUpdated': (data: {
+
+  dailyChoresReset: (data: { message: string; date: Date }) => void;
+
+  choreUpdated: (data: {
     choreId: string;
     title: string;
     changes: any;
   }) => void;
-  
-  'choreCompleted': (data: {
-    choreId: string;
-    completedBy: string;
-  }) => void;
+
+  choreCompleted: (data: { choreId: string; completedBy: string }) => void;
 }
 
 export type WebSocketEventName = keyof WebSocketEvents;
@@ -79,45 +78,46 @@ class WebSocketService {
   private userId: string | null = null;
   private authenticationTimer: any = null;
   private isAuthenticating: boolean = false;
+  private lastEvents: Map<string, any> = new Map();
 
   constructor() {
     try {
       this.initializeConnection();
     } catch (error) {
-      console.error('❌ Failed to initialize WebSocket:', error);
+      console.error("❌ Failed to initialize WebSocket:", error);
     }
   }
 
   private getServerUrl(): string {
     const apiUrl = process.env.EXPO_PUBLIC_API_URL;
-    
+
     let url: string;
     if (apiUrl) {
-      url = apiUrl.replace('/api', '');
+      url = apiUrl.replace("/api", "");
     } else {
-      console.warn('no apiUrl');
+      console.warn("no apiUrl");
       return "";
     }
-    
+
     return url;
   }
 
   private initializeConnection() {
     const serverUrl = this.getServerUrl();
-    
+
     this.socket = io(serverUrl, {
-      transports: ['polling', 'websocket'], 
+      transports: ["polling", "websocket"],
       upgrade: true,
       timeout: 20000,
       reconnection: true,
       reconnectionAttempts: this.maxReconnectAttempts,
       reconnectionDelay: 1000,
       reconnectionDelayMax: 5000,
-      forceNew: false, 
+      forceNew: false,
       autoConnect: true,
       query: {
-        transport: 'polling'
-      }
+        transport: "polling",
+      },
     });
 
     this.setupEventHandlers();
@@ -126,21 +126,21 @@ class WebSocketService {
   private setupEventHandlers() {
     if (!this.socket) return;
 
-    this.socket.on('connect', () => {
-      console.log('✅ WebSocket connected successfully');
+    this.socket.on("connect", () => {
+      console.log("✅ WebSocket connected successfully");
       this.isConnected = true;
       this.reconnectAttempts = 0;
-      
+
       if (this.userDisplayName && this.userId && !this.isAuthenticating) {
         setTimeout(() => {
           if (this.userDisplayName && this.userId && !this.isAuthenticating) {
             this.sendAuthenticationData();
           }
-        }, 500); 
+        }, 500);
       }
     });
 
-    this.socket.on('disconnect', () => {
+    this.socket.on("disconnect", () => {
       this.isConnected = false;
       this.isAuthenticating = false;
       if (this.authenticationTimer) {
@@ -149,26 +149,28 @@ class WebSocketService {
       }
     });
 
-    this.socket.on('connect_error', (error) => {
-      console.error('❌ WebSocket connection error:', error);
-      console.error('❌ Error details:', {
+    this.socket.on("connect_error", (error) => {
+      console.error("❌ WebSocket connection error:", error);
+      console.error("❌ Error details:", {
         message: error.message,
         name: error.name,
         stack: error.stack,
-        toString: error.toString()
+        toString: error.toString(),
       });
       this.reconnectAttempts++;
-      
+
       if (this.reconnectAttempts >= this.maxReconnectAttempts) {
-        console.error('❌ Max reconnection attempts reached');
-        console.log('🔄 Disabling WebSocket - continuing without real-time features');
+        console.error("❌ Max reconnection attempts reached");
+        console.log(
+          "🔄 Disabling WebSocket - continuing without real-time features",
+        );
         this.socket?.disconnect();
         this.socket = null;
         this.isConnected = false;
       }
     });
 
-    this.socket.on('reconnect', (attemptNumber) => {
+    this.socket.on("reconnect", (attemptNumber) => {
       console.log(`🔄 WebSocket reconnected after ${attemptNumber} attempts`);
       this.isConnected = true;
     });
@@ -179,89 +181,109 @@ class WebSocketService {
   private setupDefaultEventListeners() {
     if (!this.socket) return;
 
-    this.socket.on('userAuthenticated', (data: any) => {
-      console.log('✅ User authentication confirmed by server:', data);
+    this.socket.on("userAuthenticated", (data: any) => {
+      console.log("✅ User authentication confirmed by server:", data);
     });
 
-    this.socket.on('error', (error: any) => {
-      console.error('❌ Socket error:', error);
+    this.socket.on("error", (error: any) => {
+      console.error("❌ Socket error:", error);
     });
 
-    this.socket.on('connect_error', (error: any) => {
-      console.error('❌ Connect error:', error);
+    this.socket.on("connect_error", (error: any) => {
+      console.error("❌ Connect error:", error);
     });
 
-    this.socket.on('sendFriendsRequest', (data: string) => {
+    this.socket.on("sendFriendsRequest", (data: string) => {
       try {
         const parsedData = JSON.parse(data);
-        this.emitToListeners('sendFriendsRequest', parsedData);
+        this.emitToListeners("sendFriendsRequest", parsedData);
       } catch (error) {
-        console.error('Error parsing sendFriendsRequest data:', error);
+        console.error("Error parsing sendFriendsRequest data:", error);
       }
     });
 
-    this.socket.on('acceptFriendsRequest', (data: string) => {
+    this.socket.on("acceptFriendsRequest", (data: string) => {
       try {
         const parsedData = JSON.parse(data);
-        this.emitToListeners('acceptFriendsRequest', parsedData);
+        this.emitToListeners("acceptFriendsRequest", parsedData);
       } catch (error) {
-        console.error('Error parsing acceptFriendsRequest data:', error);
+        console.error("Error parsing acceptFriendsRequest data:", error);
       }
     });
 
-    this.socket.on('declineFriendsRequest', (data: string) => {
+    this.socket.on("declineFriendsRequest", (data: string) => {
       try {
         const parsedData = JSON.parse(data);
-        this.emitToListeners('declineFriendsRequest', parsedData);
+        this.emitToListeners("declineFriendsRequest", parsedData);
       } catch (error) {
-        console.error('Error parsing declineFriendsRequest data:', error);
+        console.error("Error parsing declineFriendsRequest data:", error);
       }
     });
 
-    this.socket.on('cancelFriendsRequest', (data: string) => {
+    this.socket.on("cancelFriendsRequest", (data: string) => {
       try {
         const parsedData = JSON.parse(data);
-        this.emitToListeners('cancelFriendsRequest', parsedData);
+        this.emitToListeners("cancelFriendsRequest", parsedData);
       } catch (error) {
-        console.error('Error parsing cancelFriendsRequest data:', error);
+        console.error("Error parsing cancelFriendsRequest data:", error);
       }
     });
 
-    this.socket.on('removeFriend', (data: string) => {
+    this.socket.on("removeFriend", (data: string) => {
       try {
         const parsedData = JSON.parse(data);
-        this.emitToListeners('removeFriend', parsedData);
+        this.emitToListeners("removeFriend", parsedData);
       } catch (error) {
-        console.error('Error parsing removeFriend data:', error);
+        console.error("Error parsing removeFriend data:", error);
       }
     });
 
-    this.socket.on('updateCounters', (data: string) => {
+    this.socket.on("updateCounters", (data: string) => {
       try {
         const parsedData = JSON.parse(data);
-        this.emitToListeners('updateCounters', parsedData);
+        this.emitToListeners("updateCounters", parsedData);
       } catch (error) {
-        console.error('Error parsing updateCounters data:', error);
+        console.error("Error parsing updateCounters data:", error);
       }
     });
 
-    this.socket.on('onlineUsersListener', (data: string) => {
+    this.socket.on("onlineUsersListener", (data: string) => {
       try {
         const parsedData = JSON.parse(data);
-        this.emitToListeners('onlineUsersListener', parsedData);
+        this.emitToListeners("onlineUsersListener", parsedData);
       } catch (error) {
-        console.error('Error parsing onlineUsersListener data:', error);
+        console.error("Error parsing onlineUsersListener data:", error);
+      }
+    });
+
+    this.socket.on("dailyChoresReset", (data: any) => {
+      try {
+        this.emitToListeners("dailyChoresReset", data);
+      } catch (error) {
+        console.error("Error parsing dailyChoresReset data:", error);
       }
     });
   }
 
   private emitToListeners(eventName: string, data: any) {
+    if (!this.lastEvents) {
+      console.warn("⚠️ lastEvents Map was undefined, initializing now.");
+      this.lastEvents = new Map();
+    }
+    this.lastEvents.set(eventName, data);
+
+    if (!this.eventListeners) {
+      console.warn("⚠️ eventListeners Map was undefined.");
+      return;
+    }
+
     const listeners = this.eventListeners.get(eventName) || [];
-    listeners.forEach(listener => {
+
+    listeners.forEach((listener) => {
       try {
         listener(data);
       } catch (error) {
-        console.error(`Error in ${eventName} listener:`, error);
+        console.error(`❌ Error in ${eventName} listener callback:`, error);
       }
     });
   }
@@ -271,16 +293,16 @@ class WebSocketService {
   authenticateUser(displayName: string, userId: string) {
     this.userDisplayName = displayName;
     this.userId = userId;
-    
+
     if (this.authenticationTimer) {
       clearTimeout(this.authenticationTimer);
       this.authenticationTimer = null;
     }
-    
+
     if (this.isAuthenticating) {
       return;
     }
-    
+
     this.isAuthenticating = true;
 
     if (this.socket && this.isConnected) {
@@ -295,19 +317,27 @@ class WebSocketService {
   }
 
   private sendAuthenticationData() {
-    if (this.socket && this.isConnected && this.userDisplayName && this.userId) {
-      this.socket.emit('addingOnlineUser', JSON.stringify({
-        user: {
-          _id: this.userId,
-          displayName: this.userDisplayName
-        }
-      }));
+    if (
+      this.socket &&
+      this.isConnected &&
+      this.userDisplayName &&
+      this.userId
+    ) {
+      this.socket.emit(
+        "addingOnlineUser",
+        JSON.stringify({
+          user: {
+            _id: this.userId,
+            displayName: this.userDisplayName,
+          },
+        }),
+      );
     } else {
-      console.log('🔐 Cannot send authentication data - missing data:', {
+      console.log("🔐 Cannot send authentication data - missing data:", {
         hasSocket: !!this.socket,
         isConnected: this.isConnected,
         userDisplayName: this.userDisplayName,
-        userId: this.userId
+        userId: this.userId,
       });
     }
   }
@@ -315,14 +345,14 @@ class WebSocketService {
   private waitForConnectionAndAuthenticate() {
     let attempts = 0;
     const maxAttempts = 10;
-    
+
     if (this.authenticationTimer) {
       clearTimeout(this.authenticationTimer);
     }
-    
+
     const checkConnection = () => {
       attempts++;
-      
+
       if (this.socket && this.isConnected) {
         this.sendAuthenticationData();
         this.isAuthenticating = false;
@@ -330,24 +360,31 @@ class WebSocketService {
       } else if (attempts < maxAttempts && this.authenticationTimer) {
         this.authenticationTimer = setTimeout(checkConnection, 500);
       } else {
-        console.error('🔐 Failed to connect within timeout, authentication aborted');
+        console.error(
+          "🔐 Failed to connect within timeout, authentication aborted",
+        );
         this.isAuthenticating = false;
         this.authenticationTimer = null;
       }
     };
-    
+
     this.authenticationTimer = setTimeout(checkConnection, 100);
   }
 
   addEventListener<T extends WebSocketEventName>(
     eventName: T,
-    listener: WebSocketEvents[T]
+    listener: WebSocketEvents[T],
   ): () => void {
     if (!this.eventListeners.has(eventName)) {
       this.eventListeners.set(eventName, []);
     }
-    
+
     this.eventListeners.get(eventName)!.push(listener);
+
+    const lastEvent = this.lastEvents.get(eventName);
+    if (lastEvent) {
+      listener(lastEvent);
+    }
 
     return () => {
       const listeners = this.eventListeners.get(eventName) || [];
@@ -360,7 +397,7 @@ class WebSocketService {
 
   removeEventListener<T extends WebSocketEventName>(
     eventName: T,
-    listener: WebSocketEvents[T]
+    listener: WebSocketEvents[T],
   ) {
     const listeners = this.eventListeners.get(eventName) || [];
     const index = listeners.indexOf(listener);
@@ -373,23 +410,23 @@ class WebSocketService {
     if (this.socket && this.isConnected) {
       this.socket.emit(eventName, JSON.stringify(data));
     } else {
-      console.warn('WebSocket not connected. Message not sent:', eventName);
+      console.warn("WebSocket not connected. Message not sent:", eventName);
     }
   }
 
   joinRoom(roomName: string) {
     if (this.socket && this.isConnected) {
-      this.socket.emit('joinRoom', roomName);
+      this.socket.emit("joinRoom", roomName);
     } else {
-      console.warn('WebSocket not connected. Cannot join room:', roomName);
+      console.warn("WebSocket not connected. Cannot join room:", roomName);
     }
   }
 
   leaveRoom(roomName: string) {
     if (this.socket && this.isConnected) {
-      this.socket.emit('leaveRoom', roomName);
+      this.socket.emit("leaveRoom", roomName);
     } else {
-      console.warn('WebSocket not connected. Cannot leave room:', roomName);
+      console.warn("WebSocket not connected. Cannot leave room:", roomName);
     }
   }
 
@@ -398,15 +435,15 @@ class WebSocketService {
       clearTimeout(this.authenticationTimer);
       this.authenticationTimer = null;
     }
-    
+
     this.isAuthenticating = false;
-    
+
     if (this.socket) {
-      console.log('🔌 Disconnecting WebSocket...');
+      console.log("🔌 Disconnecting WebSocket...");
       this.socket.disconnect();
       this.isConnected = false;
     } else {
-      console.log('🔌 No socket to disconnect');
+      console.log("🔌 No socket to disconnect");
     }
   }
 
@@ -415,16 +452,16 @@ class WebSocketService {
       clearTimeout(this.authenticationTimer);
       this.authenticationTimer = null;
     }
-    
+
     this.isAuthenticating = false;
-    
+
     this.userDisplayName = null;
     this.userId = null;
   }
 
   reconnect() {
     this.disconnect();
-    
+
     setTimeout(() => {
       if (this.socket) {
         this.socket.connect();
@@ -437,16 +474,16 @@ class WebSocketService {
   resetConnection() {
     this.clearUserData();
     this.disconnect();
-    
+
     if (this.socket) {
       this.socket.removeAllListeners();
       this.socket.disconnect();
       this.socket = null;
     }
-    
+
     this.isConnected = false;
     this.reconnectAttempts = 0;
-    
+
     this.initializeConnection();
   }
 
@@ -457,7 +494,7 @@ class WebSocketService {
   getCurrentUser(): { displayName: string | null; userId: string | null } {
     return {
       displayName: this.userDisplayName,
-      userId: this.userId
+      userId: this.userId,
     };
   }
 }

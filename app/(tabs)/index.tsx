@@ -12,6 +12,7 @@ import { useChores } from "../(context)/ChoresContext";
 export default function Index() {
   const { fetchData, choresUser } = useChores();
   const { user } = useSession();
+
   const [isModalVisible, setIsModalVisible] = useState(false);
 
   useEffect(() => {

@@ -1,10 +1,23 @@
 import { Tabs } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { useChoresWebSocket } from '@/lib/websocket/useWebSocket';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { useEffect } from 'react';
+import { useSession } from '../(context)/AuthContext';
+import { useChores } from '../(context)/ChoresContext';
 
 export default function TabLayout() {
   const insets = useSafeAreaInsets();
+  const { user } = useSession();
+  const { dailyResetEvent } = useChoresWebSocket();
+  const { fetchData } = useChores();
+
+  useEffect(() => {
+    if (dailyResetEvent && user?._id) {
+      fetchData({ userId: user._id });
+    }
+  }, [dailyResetEvent, fetchData, user?._id]);
 
   return (
     <Tabs

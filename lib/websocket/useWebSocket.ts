@@ -184,6 +184,8 @@ export function useFriendsWebSocket() {
 
 export function useChoresWebSocket() {
   const [recentChoreUpdate, setRecentChoreUpdate] = useState<any>(null);
+  const [dailyResetEvent, setDailyResetEvent] = useState<any>(null);
+  const { userId } = webSocketService.getCurrentUser();
 
   useWebSocketEvent("choreCreated", (data) => {
     setRecentChoreUpdate({ type: "created", ...data });
@@ -197,12 +199,25 @@ export function useChoresWebSocket() {
     setRecentChoreUpdate({ type: "completed", ...data });
   });
 
+  useWebSocketEvent("dailyChoresReset", (data) => {
+    if (
+      userId &&
+      typeof data === "object" &&
+      data !== null &&
+      Array.isArray((data as any).affectedUsers) &&
+      (data as any).affectedUsers.includes(userId)
+    ) {
+      setDailyResetEvent(data);
+    }
+  });
+
   const clearRecentChoreUpdate = () => {
     setRecentChoreUpdate(null);
   };
 
   return {
     recentChoreUpdate,
+    dailyResetEvent,
     clearRecentChoreUpdate,
   };
 }
