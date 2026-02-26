@@ -5,20 +5,41 @@ import { patchChore, postChore } from "@/lib/fetch/chores";
 import { validateIntervalData } from "@/lib/intervalUtils";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { PropsWithChildren, useEffect, useRef, useState } from "react";
-import { ActivityIndicator, Alert, Modal, ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
+import {
+  ActivityIndicator,
+  Alert,
+  Modal,
+  ScrollView,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import IntervalSelector, { IntervalType } from "./IntervalSelector";
 import UserSelector from "./UserSelector";
+
+export interface SelectedUser {
+  _id: string;
+  displayName: string;
+}
 
 interface ChoreModalProps extends PropsWithChildren {
   isVisible: boolean;
   onClose: () => void;
   editChore?: ChoreType | null;
-  mode?: 'add' | 'edit';
+  mode?: "add" | "edit";
   currentScreen?: "index" | "chores-screen" | "chores-daily";
 }
 
-export default function ChoreModal({ children, isVisible, onClose, editChore, mode = 'add', currentScreen = "index" }: ChoreModalProps) {
+export default function ChoreModal({
+  children,
+  isVisible,
+  onClose,
+  editChore,
+  mode = "add",
+  currentScreen = "index"
+}: ChoreModalProps) {
   const { user } = useSession();
   const { dispatchChore } = useChores();
 
@@ -27,15 +48,23 @@ export default function ChoreModal({ children, isVisible, onClose, editChore, mo
   const [inputTitle, setInputTitle] = useState("");
   const [inputDescription, setInputDescription] = useState("");
   const [inputRepeatable, setInputRepeatable] = useState<boolean>(false);
-  const [selectedInterval, setSelectedInterval] = useState<IntervalType | null>(null);
+  const [selectedInterval, setSelectedInterval] =
+    useState<IntervalType | null>(null);
   const [customDays, setCustomDays] = useState<number>(1);
-  const [selectedUserNames, setSelectedUserNames] = useState<string[]>([]);
+
+  const [selectedUsers, setSelectedUsers] = useState<SelectedUser[]>([]);
 
   useEffect(() => {
-    if (mode === 'edit' && editChore) {
+    if (mode === "edit" && editChore) {
       setInputTitle(editChore.title);
       setInputDescription(editChore.description || "");
-      setSelectedUserNames(editChore.usersList.map(user => user.displayName));
+
+      setSelectedUsers(
+        editChore.usersList.map((u) => ({
+          _id: u.userId,
+          displayName: u.displayName
+        }))
+      );
 
       setInputRepeatable(editChore.isRepeatable || false);
       setSelectedInterval(editChore.intervalType || null);
@@ -43,19 +72,27 @@ export default function ChoreModal({ children, isVisible, onClose, editChore, mo
     } else if (mode === "add") {
       setInputTitle("");
       setInputDescription("");
-      setSelectedUserNames(user?.displayName ? [user.displayName] : []);
-      setInputRepeatable(currentScreen === "chores-daily" ? true : false);
+
+      if (user?._id && user.displayName) {
+        setSelectedUsers([
+          { _id: user._id, displayName: user.displayName }
+        ]);
+      }
+
+      setInputRepeatable(currentScreen === "chores-daily");
       setSelectedInterval(currentScreen === "chores-daily" ? "daily" : null);
       setCustomDays(1);
     }
-  }, [mode, editChore, user?.displayName, isVisible, currentScreen]);
+  }, [mode, editChore, user?._id, user?.displayName, isVisible, currentScreen]);
 
-  const toggleUserSelection = (userName: string) => {
-    setSelectedUserNames(prev => {
-      if (prev.includes(userName)) {
-        return prev.filter(name => name !== userName);
+  const toggleUserSelection = (userObj: SelectedUser) => {
+    setSelectedUsers((prev) => {
+      const exists = prev.find((u) => u._id === userObj._id);
+
+      if (exists) {
+        return prev.filter((u) => u._id !== userObj._id);
       } else {
-        return [...prev, userName];
+        return [...prev, userObj];
       }
     });
   };
@@ -67,7 +104,7 @@ export default function ChoreModal({ children, isVisible, onClose, editChore, mo
 
     try {
       if (!user?._id) {
-        Alert.alert("Błąd", "Brak ID użytkownika. Nie można zapisać obowiązku.");
+        Alert.alert("Błąd", "Brak ID użytkownika.");
         return;
       }
 
@@ -76,15 +113,10 @@ export default function ChoreModal({ children, isVisible, onClose, editChore, mo
         return;
       }
 
-      if (selectedUserNames.length === 0 && inputRepeatable === false) {
-        Alert.alert("Błąd", "Przypisz przynajmniej jednego użytkownika.");
-        return;
-      }
-
       const intervalValidation = validateIntervalData({
         isRepeatable: inputRepeatable,
         intervalType: selectedInterval || undefined,
-        customDays: customDays
+        customDays
       });
 
       if (!intervalValidation.isValid) {
@@ -92,61 +124,63 @@ export default function ChoreModal({ children, isVisible, onClose, editChore, mo
         return;
       }
 
-      let usersList: { displayName: string; finished: boolean; }[] = [];
+      let usersList: {
+        userId: string;
+        displayName: string;
+        finished: boolean;
+      }[] = [];
 
-      if (inputRepeatable === false) {
-        usersList = selectedUserNames.map(name => ({ displayName: name, finished: false }));
+      if (!inputRepeatable) {
+        usersList = selectedUsers.map((u) => ({
+          userId: u._id,
+          displayName: u.displayName,
+          finished: false
+        }));
       } else {
-        usersList = [{ displayName: user.displayName, finished: false }];
+        usersList = [
+          {
+            userId: user._id,
+            displayName: user.displayName,
+            finished: false
+          }
+        ];
       }
 
       const choreData = {
         ownerId: user._id,
-        usersList: usersList,
+        usersList,
         title: inputTitle,
         description: inputDescription,
         isRepeatable: inputRepeatable,
-        ...(inputRepeatable && selectedInterval && {
+        ...(inputRepeatable &&
+          selectedInterval && {
           intervalType: selectedInterval,
-          ...(selectedInterval === 'custom' && { customDays }),
+          ...(selectedInterval === "custom" && { customDays })
         })
       };
 
       let response;
 
-      if (mode === 'edit' && editChore?._id) {
+      if (mode === "edit" && editChore?._id) {
         response = await patchChore({
           _id: editChore._id,
           ...choreData
         });
 
-        if (!response || (typeof response === "object" && "message" in response)) {
-          throw new Error((response as { message?: string }).message || "Błąd w aktualizacji obowiązku");
+        if (response && "_id" in response) {
+          dispatchChore({ type: "update", updatedChore: response });
         }
-
-        dispatchChore({ type: "update", updatedChore: response as ChoreType });
       } else {
         response = await postChore(choreData);
 
-        if (!response || (typeof response === "object" && "message" in response && typeof response.message === "string")) {
-          throw new Error((response as { message?: string }).message || "Błąd w tworzeniu obowiązku");
+        if (response && "_id" in response) {
+          dispatchChore({ type: "add-chore", newChore: response });
         }
-
-        dispatchChore({ type: "add-chore", newChore: response });
       }
 
-      setInputTitle("");
-      setInputDescription("");
-      setSelectedUserNames([]);
-      setInputRepeatable(false);
-      setSelectedInterval(null);
-      setCustomDays(1);
       onClose();
     } catch (error) {
       console.error(error);
-      if (error instanceof TypeError) {
-        Alert.alert(`Błąd przy ${mode === 'edit' ? 'aktualizacji' : 'dodawaniu'} obowiązku`, error.message)
-      }
     } finally {
       setIsLoading(false);
     }
@@ -155,7 +189,7 @@ export default function ChoreModal({ children, isVisible, onClose, editChore, mo
   const handleClose = () => {
     setInputTitle("");
     setInputDescription("");
-    setSelectedUserNames([]);
+    setSelectedUsers([]);
     setInputRepeatable(false);
     setSelectedInterval(null);
     setCustomDays(1);
@@ -166,49 +200,36 @@ export default function ChoreModal({ children, isVisible, onClose, editChore, mo
     <View>
       {children}
 
-      <Modal
-        animationType="slide"
-        transparent={true}
-        visible={isVisible}
-        onRequestClose={handleClose}
-      >
+      <Modal animationType="slide" transparent visible={isVisible}>
         <SafeAreaView className="flex-1">
           <View className="relative flex-1 p-6 m-8 bg-slate-300 rounded-3xl overflow-hidden">
             <TouchableOpacity
               className="absolute top-0 right-0 p-4 z-10"
-              onPress={handleClose}>
+              onPress={handleClose}
+            >
               <Ionicons name="close-circle" size={30} />
             </TouchableOpacity>
 
             <View className="pt-8 gap-6">
               <Text className="text-3xl">
-                {mode === 'edit' ? 'Edytuj obowiązek' : 'Dodaj obowiązek'}
+                {mode === "edit" ? "Edytuj obowiązek" : "Dodaj obowiązek"}
               </Text>
 
               <ScrollView>
                 <View className="gap-4 pb-12">
-                  <View>
-                    <Text className="text font-medium text-gray-700 mb-2">Tytuł</Text>
-                    <TextInput
-                      className="w-full px-4 py-3 border bg-white border-gray-300 rounded-lg"
-                      value={inputTitle}
-                      onChangeText={setInputTitle}
-                      returnKeyType="next"
-                      onSubmitEditing={() => inputDescriptionRef.current?.focus()}
-                    />
-                  </View>
+                  <TextInput
+                    className="w-full px-4 py-3 border bg-white rounded-lg"
+                    value={inputTitle}
+                    onChangeText={setInputTitle}
+                  />
 
-                  <View>
-                    <Text className="text font-medium text-gray-700 mb-2">Opis</Text>
-                    <TextInput
-                      ref={inputDescriptionRef}
-                      className="w-full px-4 py-3 border bg-white border-gray-300 rounded-lg"
-                      multiline
-                      value={inputDescription}
-                      onChangeText={setInputDescription}
-                      returnKeyType="next"
-                    />
-                  </View>
+                  <TextInput
+                    ref={inputDescriptionRef}
+                    className="w-full px-4 py-3 border bg-white rounded-lg"
+                    multiline
+                    value={inputDescription}
+                    onChangeText={setInputDescription}
+                  />
 
                   <CheckboxItem
                     label="Powtarzalne?"
@@ -219,7 +240,7 @@ export default function ChoreModal({ children, isVisible, onClose, editChore, mo
 
                   {!inputRepeatable ? (
                     <UserSelector
-                      selectedUserNames={selectedUserNames}
+                      selectedUsers={selectedUsers}
                       onToggleUser={toggleUserSelection}
                     />
                   ) : (
@@ -232,15 +253,14 @@ export default function ChoreModal({ children, isVisible, onClose, editChore, mo
                   )}
 
                   <TouchableOpacity
-                    className={`self-end w-fit p-3 rounded-lg mt-6 ${isLoading === true ? "bg-blue-600/30" : "bg-blue-600"}`}
+                    className="self-end p-3 rounded-lg mt-6 bg-blue-600"
                     onPress={handleSubmit}
-                    disabled={isLoading}
                   >
                     {isLoading ? (
                       <ActivityIndicator color="white" />
                     ) : (
-                      <Text className="text-white text-center font-semibold text-lg">
-                        {mode === 'edit' ? 'Zapisz' : 'Dodaj'}
+                      <Text className="text-white font-semibold text-lg">
+                        {mode === "edit" ? "Zapisz" : "Dodaj"}
                       </Text>
                     )}
                   </TouchableOpacity>
@@ -251,5 +271,5 @@ export default function ChoreModal({ children, isVisible, onClose, editChore, mo
         </SafeAreaView>
       </Modal>
     </View>
-  )
+  );
 }

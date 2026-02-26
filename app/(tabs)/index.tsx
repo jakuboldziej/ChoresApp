@@ -10,7 +10,7 @@ import { useSession } from "../(context)/AuthContext";
 import { useChores } from "../(context)/ChoresContext";
 
 export default function Index() {
-  const { fetchData } = useChores();
+  const { fetchData, choresUser } = useChores();
   const { user } = useSession();
   const [isModalVisible, setIsModalVisible] = useState(false);
 
@@ -67,7 +67,7 @@ export default function Index() {
         <View className="mb-8">
           <View className="flex-row items-center mb-4 gap-2">
             <Ionicons name="repeat" size={24} color="#2563eb" />
-            <Text className="text-xl font-bold text-gray-800">Twoja Rutyna</Text>
+            <Text className="text-xl font-bold text-gray-800">Twoja Rutyna 🔥 {choresUser.dailyStreak}</Text>
           </View>
           <DisplayChores
             currentScreen="index"

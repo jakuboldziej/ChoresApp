@@ -4,9 +4,11 @@ import Ionicons from '@expo/vector-icons/Ionicons'
 import React, { useState } from 'react'
 import { ScrollView, Text, TouchableOpacity, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
+import { useChores } from '../(context)/ChoresContext'
 
 export default function DailyChoresScreen() {
   const [isModalVisible, setIsModalVisible] = useState(false);
+  const { choresUser } = useChores();
 
   return (
     <SafeAreaView className="flex-1 bg-white">
@@ -15,7 +17,7 @@ export default function DailyChoresScreen() {
         contentContainerStyle={{ paddingBottom: 100 }}
       >
         <View className="px-6 pt-10">
-          <Text className="text-4xl font-bold text-gray-800">Dzisiejsze</Text>
+          <Text className="text-4xl font-bold text-gray-800">Dzisiejsze 🔥 {choresUser.dailyStreak}</Text>
           <Text className="text-gray-500 text-lg">Zresetują się o północy</Text>
         </View>
 

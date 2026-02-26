@@ -3,39 +3,38 @@ import { useFriends } from '@/app/(context)/FriendsContext';
 import CheckboxItem from '@/components/CheckboxItem';
 import React from 'react';
 import { ScrollView, Text, View } from 'react-native';
+import { SelectedUser } from './ChoreModal';
 
-interface UserOption {
-  label: string;
-  value: string;
-}
+interface UserSelectorProps { selectedUsers: SelectedUser[]; onToggleUser: (user: SelectedUser) => void; }
 
-interface UserSelectorProps {
-  selectedUserNames: string[];
-  onToggleUser: (userName: string) => void;
-}
-
-export default function UserSelector({ selectedUserNames, onToggleUser }: UserSelectorProps) {
+export default function UserSelector({ selectedUsers, onToggleUser }: UserSelectorProps) {
   const { user } = useSession();
   const { friends } = useFriends();
 
-  const getAvailableUsers = (): UserOption[] => {
-    const users: UserOption[] = [{ label: user?.displayName || 'Ja', value: user?._id || '' }];
+  const getAvailableUsers = (): SelectedUser[] => {
+    const users: SelectedUser[] = [];
+
+    if (user?._id && user.displayName) {
+      users.push({
+        _id: user._id,
+        displayName: user.displayName
+      });
+    }
 
     if (friends && Array.isArray(friends)) {
-      friends.forEach((friendDisplayName: string) => {
+      friends.forEach((friendName: string) => {
         users.push({
-          label: friendDisplayName,
-          value: friendDisplayName
+          _id: friendName,
+          displayName: friendName
         });
       });
     }
 
-    return users.filter((user, index, self) =>
-      user.value &&
-      user.value !== '' &&
-      self.findIndex(u => u.value === user.value) === index
+    return users.filter(
+      (u, i, self) => u._id && self.findIndex(x => x._id === u._id) === i
     );
   };
+
 
   const availableUsers = getAvailableUsers();
 
@@ -49,12 +48,9 @@ export default function UserSelector({ selectedUserNames, onToggleUser }: UserSe
           showsVerticalScrollIndicator={true}
           contentContainerStyle={{ padding: 8 }}
         >
-          {availableUsers.map((userOption) => (
-            <CheckboxItem
-              key={userOption.value}
-              label={userOption.label}
-              isSelected={selectedUserNames.includes(userOption.label)}
-              onPress={() => onToggleUser(userOption.label)}
+          {availableUsers.map((u) => (
+            <CheckboxItem key={u._id} label={u.displayName} isSelected={selectedUsers.some(su => su._id === u._id)}
+              onPress={() => onToggleUser(u)}
             />
           ))}
 
@@ -67,7 +63,7 @@ export default function UserSelector({ selectedUserNames, onToggleUser }: UserSe
       </View>
 
       <Text className="text-xs text-gray-500 mt-1">
-        Wybrano: {selectedUserNames.length} użytkowników
+        Wybrano: {selectedUsers.length} użytkowników
         {availableUsers.length > 0 && ` z ${availableUsers.length} dostępnych`}
       </Text>
     </View>

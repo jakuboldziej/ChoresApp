@@ -1,5 +1,9 @@
-import { useEffect, useRef, useState } from 'react';
-import { WebSocketEventName, WebSocketEvents, webSocketService } from './WebSocketService';
+import { useEffect, useRef, useState } from "react";
+import {
+  WebSocketEventName,
+  WebSocketEvents,
+  webSocketService,
+} from "./WebSocketService";
 
 export function useWebSocket() {
   const [isConnected, setIsConnected] = useState(false);
@@ -11,7 +15,7 @@ export function useWebSocket() {
         setIsConnected(webSocketService.getConnectionStatus());
       } catch {
         setIsConnected(false);
-        setConnectionError('WebSocket service not available');
+        setConnectionError("WebSocket service not available");
       }
     };
 
@@ -26,7 +30,9 @@ export function useWebSocket() {
       webSocketService.authenticateUser(displayName, userId);
       setConnectionError(null);
     } catch (error) {
-      setConnectionError(error instanceof Error ? error.message : 'Connection failed');
+      setConnectionError(
+        error instanceof Error ? error.message : "Connection failed",
+      );
     }
   };
 
@@ -45,13 +51,13 @@ export function useWebSocket() {
     connect,
     disconnect,
     emit,
-    service: webSocketService
+    service: webSocketService,
   };
 }
 
 export function useWebSocketEvent<T extends WebSocketEventName>(
   eventName: T,
-  handler: WebSocketEvents[T]
+  handler: WebSocketEvents[T],
 ) {
   const handlerRef = useRef(handler);
   const unsubscribeRef = useRef<(() => void) | null>(null);
@@ -65,7 +71,10 @@ export function useWebSocketEvent<T extends WebSocketEventName>(
       handlerRef.current(data);
     };
 
-    unsubscribeRef.current = webSocketService.addEventListener(eventName, wrappedHandler);
+    unsubscribeRef.current = webSocketService.addEventListener(
+      eventName,
+      wrappedHandler,
+    );
 
     return () => {
       if (unsubscribeRef.current) {
@@ -103,37 +112,37 @@ export function useFriendsWebSocket() {
     removedUser: string;
   } | null>(null);
 
-  useWebSocketEvent('sendFriendsRequest', (data) => {
+  useWebSocketEvent("sendFriendsRequest", (data) => {
     setRecentFriendRequest({
       from: data.currentUserDisplayName,
-      to: data.userDisplayName
+      to: data.userDisplayName,
     });
     setFriendRequestsCount(data.friendsRequestsReceived);
   });
 
-  useWebSocketEvent('acceptFriendsRequest', (data) => {
+  useWebSocketEvent("acceptFriendsRequest", (data) => {
     setRecentFriendAcceptance(data);
   });
 
-  useWebSocketEvent('declineFriendsRequest', (data) => {
+  useWebSocketEvent("declineFriendsRequest", (data) => {
     setRecentFriendDecline(data);
   });
 
-  useWebSocketEvent('cancelFriendsRequest', (data) => {
+  useWebSocketEvent("cancelFriendsRequest", (data) => {
     setRecentFriendCancel(data);
   });
 
-  useWebSocketEvent('removeFriend', (data) => {
+  useWebSocketEvent("removeFriend", (data) => {
     setRecentFriendRemoval(data);
   });
 
-  useWebSocketEvent('updateCounters', (data) => {
+  useWebSocketEvent("updateCounters", (data) => {
     if (data.friendsRequestsReceived !== undefined) {
       setFriendRequestsCount(data.friendsRequestsReceived);
     }
   });
 
-  useWebSocketEvent('onlineUsersListener', (data) => {
+  useWebSocketEvent("onlineUsersListener", (data) => {
     setOnlineUsers(data.updatedOnlineUsers);
   });
 
@@ -169,23 +178,23 @@ export function useFriendsWebSocket() {
     clearRecentFriendAcceptance,
     clearRecentFriendDecline,
     clearRecentFriendCancel,
-    clearRecentFriendRemoval
+    clearRecentFriendRemoval,
   };
 }
 
 export function useChoresWebSocket() {
   const [recentChoreUpdate, setRecentChoreUpdate] = useState<any>(null);
 
-  useWebSocketEvent('choreCreated', (data) => {
-    setRecentChoreUpdate({ type: 'created', ...data });
+  useWebSocketEvent("choreCreated", (data) => {
+    setRecentChoreUpdate({ type: "created", ...data });
   });
 
-  useWebSocketEvent('choreUpdated', (data) => {
-    setRecentChoreUpdate({ type: 'updated', ...data });
+  useWebSocketEvent("choreUpdated", (data) => {
+    setRecentChoreUpdate({ type: "updated", ...data });
   });
 
-  useWebSocketEvent('choreCompleted', (data) => {
-    setRecentChoreUpdate({ type: 'completed', ...data });
+  useWebSocketEvent("choreCompleted", (data) => {
+    setRecentChoreUpdate({ type: "completed", ...data });
   });
 
   const clearRecentChoreUpdate = () => {
@@ -194,6 +203,6 @@ export function useChoresWebSocket() {
 
   return {
     recentChoreUpdate,
-    clearRecentChoreUpdate
+    clearRecentChoreUpdate,
   };
 }

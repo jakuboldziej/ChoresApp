@@ -8,10 +8,10 @@ export const getUser = async (displayName: string): Promise<User | null> => {
 
     return await response.json();
   } catch (error: unknown) {
-    console.error('getUser error details:', error);
+    console.error("getUser error details:", error);
     return null;
   }
-}
+};
 
 export const addFriend = async (friendsCode: string) => {
   try {
@@ -21,17 +21,18 @@ export const addFriend = async (friendsCode: string) => {
     const response = await fetch(`${apiUrl}/auth/users/send-friends-request/`, {
       method: "POST",
       headers: {
-        "Authorization": session && typeof session.token === "string" ? session.token : "",
-        "Content-Type": "application/json"
+        Authorization:
+          session && typeof session.token === "string" ? session.token : "",
+        "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        userFriendCode: friendsCode
-      })
+        userFriendCode: friendsCode,
+      }),
     });
 
     return await response.json();
   } catch (error: unknown) {
-    console.error('getUser error details:', error);
+    console.error("getUser error details:", error);
     return false;
   }
-}
+};

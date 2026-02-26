@@ -51,7 +51,7 @@ export default function DisplayChores({ currentScreen, pFinished = null, typeFil
   const handleContextMenuMark = () => {
     if (contextMenuChore?._id) {
       handleMarkCompletion(contextMenuChore._id, contextMenuChore.title);
-      closeContextMenu(); // Good UX to close it after action
+      closeContextMenu();
     }
   };
 
@@ -155,7 +155,7 @@ export default function DisplayChores({ currentScreen, pFinished = null, typeFil
                 />
               )}
             </View>
-            <Text className='text-xl font-semibold'>{chore.title}</Text>
+            <Text className='text-xl font-semibold '>{chore.title}</Text>
           </TouchableOpacity>
         ))}
       </ScrollView>

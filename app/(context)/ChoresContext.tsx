@@ -1,6 +1,7 @@
 import { parseAuthToken } from "@/lib/auth";
 import { findChoreUser } from "@/lib/choreUtils";
 import { deleteChore, getChores, patchChore } from "@/lib/fetch/chores";
+import { getChoresUser } from "@/lib/fetch/choresUser";
 import { router } from "expo-router";
 import { createContext, PropsWithChildren, use, useCallback, useEffect, useReducer, useState } from "react";
 import { Alert } from "react-native";
@@ -9,7 +10,7 @@ import { useSession } from "./AuthContext";
 export interface ChoreType {
   _id?: string;
   ownerId: string;
-  usersList: { displayName: string; finished: boolean }[];
+  usersList: { displayName: string; finished: boolean, userId: string }[];
   title: string;
   description: string;
   finished?: boolean;
@@ -21,6 +22,12 @@ export interface ChoreType {
   customDays?: number;
   lastResetDate?: string;
   lastCompletedDate?: string;
+}
+
+export interface ChoresUserType {
+  authUserId: string;
+  dailyStreak: number;
+  pushToken: string;
 }
 
 export interface ChoreTypeFilters {
@@ -41,6 +48,7 @@ interface ChoreAction {
 interface ChoresContextTypes {
   chores: ChoreType[];
   isLoading: boolean;
+  choresUser: ChoresUserType;
   dispatchChore: React.Dispatch<ChoreAction>;
   fetchData: (filters?: ChoreTypeFilters) => Promise<void>;
   handleChoreFinished: (choreId: string, userDisplayName: string) => Promise<void>;
@@ -50,6 +58,7 @@ interface ChoresContextTypes {
 const ChoresContext = createContext<ChoresContextTypes>({
   chores: [],
   isLoading: false,
+  choresUser: { authUserId: '', dailyStreak: 0, pushToken: '' },
   dispatchChore: () => { },
   fetchData: async () => { },
   handleChoreFinished: async () => { },
@@ -88,6 +97,7 @@ export function ChoresProvider({ children }: PropsWithChildren) {
   }
 
   const [chores, dispatch] = useReducer(choresReducer, []);
+  const [choresUser, setChoresUser] = useState<ChoresUserType | null>();
 
   const [isLoading, setIsLoading] = useState(false);
 
@@ -198,6 +208,11 @@ export function ChoresProvider({ children }: PropsWithChildren) {
         ...(filters || {})
       });
 
+      if (filters?.userId) {
+        const choresUserResponse = await getChoresUser(filters.userId);
+        setChoresUser(choresUserResponse);
+      }
+
       dispatch({ type: "create", chores: response });
     } catch (error: unknown) {
       if (error instanceof TypeError) {
@@ -226,6 +241,7 @@ export function ChoresProvider({ children }: PropsWithChildren) {
     <ChoresContext
       value={{
         chores,
+        choresUser: choresUser ?? { authUserId: '', dailyStreak: 0, pushToken: '' },
         dispatchChore: dispatch,
         isLoading,
         fetchData,

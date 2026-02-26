@@ -7,15 +7,15 @@ import { getUser } from "./users";
 export const testConnection = async (): Promise<boolean> => {
   try {
     const response = await fetch(`${apiUrl}/health`, {
-      method: 'GET',
+      method: "GET",
       headers: {
-        'Content-Type': 'application/json'
-      }
+        "Content-Type": "application/json",
+      },
     });
-    
+
     return response.ok;
   } catch (error) {
-    console.error('Health check failed:', error);
+    console.error("Health check failed:", error);
     return false;
   }
 };
@@ -25,40 +25,53 @@ export const login = async (displayName: string, password: string) => {
     const response = await fetch(`${apiUrl}/auth/login`, {
       method: "POST",
       headers: {
-        "Content-Type": "application/json"
+        "Content-Type": "application/json",
       },
       body: JSON.stringify({
         displayName,
-        password
-      })
+        password,
+      }),
     });
 
     if (!response.ok) {
       const errorText = await response.text();
-      throw new Error(`HTTP ${response.status}: ${errorText || 'Błąd autoryzacji'}`);
+      throw new Error(
+        `HTTP ${response.status}: ${errorText || "Błąd autoryzacji"}`,
+      );
     }
 
     const data = await response.json();
-    
-    if (!data?.token || !data) throw new Error(data?.message || 'Błąd autoryzacji');
+
+    if (!data?.token || !data)
+      throw new Error(data?.message || "Błąd autoryzacji");
 
     const userResponse = await getUser(displayName);
 
     if (!userResponse) throw new Error("Błąd autoryzacji");
-    if (userResponse && (userResponse as any).message) throw new Error((userResponse as any).message);
-    
+    if (userResponse && (userResponse as any).message)
+      throw new Error((userResponse as any).message);
+
     return {
       ...data,
-      user: userResponse as User
+      user: userResponse as User,
     } as LoginResponse;
-  } catch (error: unknown) {    
-    if (error instanceof TypeError && error.message === 'Network request failed') {
+  } catch (error: unknown) {
+    if (
+      error instanceof TypeError &&
+      error.message === "Network request failed"
+    ) {
       Alert.alert(
-        "Błąd połączenia z serwerem", 
+        "Błąd połączenia z serwerem",
         `Nie udało się połączyć z serwerem ${apiUrl}.`,
         [
-          { text: "Zamknij", style: "cancel", onPress: () => { throw error; } },
-        ]
+          {
+            text: "Zamknij",
+            style: "cancel",
+            onPress: () => {
+              throw error;
+            },
+          },
+        ],
       );
     } else if (error instanceof Error) {
       throw error;
@@ -71,25 +84,26 @@ export const login = async (displayName: string, password: string) => {
 };
 
 export const saveExpoToken = async (userId: string, pushToken: string) => {
-    const sessionString = await getItemAsync("session");
-    const session = sessionString ? parseAuthToken(sessionString) : null;
+  const sessionString = await getItemAsync("session");
+  const session = sessionString ? parseAuthToken(sessionString) : null;
 
   try {
     const response = await fetch(`${apiUrl}/chores/users/save-expo-token`, {
-      method: 'POST',
+      method: "POST",
       headers: {
-        'Content-Type': 'application/json',
-        "Authorization": session && typeof session.token === "string" ? session.token : "",
+        "Content-Type": "application/json",
+        Authorization:
+          session && typeof session.token === "string" ? session.token : "",
       },
       body: JSON.stringify({
         userId,
-        pushToken
-      })
+        pushToken,
+      }),
     });
 
     return await response.json();
   } catch (error) {
-    console.error('Saving token failed:', error);
+    console.error("Saving token failed:", error);
     return;
   }
-}
+};
