@@ -7,8 +7,9 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import { useChores } from '../(context)/ChoresContext'
 
 export default function DailyChoresScreen() {
-  const [isModalVisible, setIsModalVisible] = useState(false);
   const { choresUser } = useChores();
+
+  const [isModalVisible, setIsModalVisible] = useState(false);
 
   return (
     <SafeAreaView className="flex-1 bg-white">

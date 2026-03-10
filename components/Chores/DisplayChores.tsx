@@ -11,10 +11,11 @@ import ChoreModal from './ChoreModal';
 interface DisplayChoresProps {
   currentScreen?: "index" | "chores-screen" | "chores-daily";
   pFinished?: boolean | null;
-  typeFilter?: "repeatable" | "one-off" | "all"; // Add this prop
+  typeFilter?: "repeatable" | "one-off" | "all";
+  intervalFilter?: "daily" | "weekly" | "monthly" | "custom" | "all";
 }
 
-export default function DisplayChores({ currentScreen, pFinished = null, typeFilter }: DisplayChoresProps) {
+export default function DisplayChores({ currentScreen, pFinished = null, typeFilter, intervalFilter }: DisplayChoresProps) {
   const { user } = useSession();
 
   const { chores, fetchData, isLoading, handleChoreFinished, handleChoreDelete } = useChores();
@@ -99,19 +100,32 @@ export default function DisplayChores({ currentScreen, pFinished = null, typeFil
         return true;
       }
 
+      if (currentScreen === "chores-screen") {
+
+        if (typeFilter === "one-off") {
+          return !chore.isRepeatable;
+        }
+
+        if (typeFilter === "repeatable") {
+          if (!chore.isRepeatable) return false;
+
+          if (intervalFilter === "all") return true;
+
+          return chore.intervalType === intervalFilter;
+        }
+
+        return true;
+      }
+
       if (currentScreen === "chores-daily") {
         return chore.isRepeatable === true &&
           chore.intervalType === "daily" &&
           chore.finished === pFinished;
       }
 
-      if (currentScreen === "chores-screen") {
-        return !chore.isRepeatable;
-      }
-
       return true;
     });
-  }, [chores, currentScreen, pFinished, typeFilter, user?.displayName]);
+  }, [chores, currentScreen, pFinished, typeFilter, intervalFilter, user?.displayName]);
 
   return (
     <View ref={containerRef} style={{ flex: 1, position: 'relative' }}>

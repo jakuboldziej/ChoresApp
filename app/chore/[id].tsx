@@ -198,9 +198,7 @@ export default function ChoreDetails() {
         onClose={() => setIsEditModalVisible(false)}
         mode="edit"
         editChore={chore}
-      >
-        <></>
-      </ChoreModal>
+      />
     </SafeAreaView>
   );
 }
