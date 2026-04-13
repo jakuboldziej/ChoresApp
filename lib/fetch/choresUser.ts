@@ -16,7 +16,9 @@ export const getChoresUser = async (
         method: "GET",
         headers: {
           Authorization:
-            session && typeof session.token === "string" ? session.token : "",
+            session && typeof session.token === "string"
+              ? `Bearer ${session.token}`
+              : "",
         },
       },
     );

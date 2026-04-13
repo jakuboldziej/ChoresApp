@@ -208,6 +208,8 @@ export function ChoresProvider({ children }: PropsWithChildren) {
         ...(filters || {})
       });
 
+      if (!response || (Array.isArray(response) === false && (response as any).message)) throw new Error((response as any)?.message || "Error fetching data");
+
       if (filters?.userId) {
         const choresUserResponse = await getChoresUser(filters.userId);
         setChoresUser(choresUserResponse);

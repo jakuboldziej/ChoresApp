@@ -4,16 +4,28 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 import { addNotificationReceivedListener, addNotificationResponseReceivedListener } from "expo-notifications";
 import { router } from "expo-router";
 import { useEffect, useState } from "react";
-import { ScrollView, Text, TouchableOpacity, View } from "react-native";
+import { RefreshControl, ScrollView, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useSession } from "../(context)/AuthContext";
 import { useChores } from "../(context)/ChoresContext";
 
 export default function Index() {
-  const { fetchData, choresUser } = useChores();
+  const { fetchData, choresUser, isLoading } = useChores();
   const { user } = useSession();
 
   const [isModalVisible, setIsModalVisible] = useState(false);
+
+  const onRefresh = async () => {
+    try {
+      if (!user?._id) throw new Error("Użytkownik jest wymagany");
+
+      await fetchData({
+        userId: user._id
+      });
+    } catch (error) {
+      console.error('Error refreshing chores:', error);
+    }
+  };
 
   useEffect(() => {
     const notificationListener = addNotificationReceivedListener(notification => {
@@ -59,6 +71,9 @@ export default function Index() {
       <ScrollView
         className="flex-1 px-4"
         contentContainerStyle={{ paddingBottom: 100 }}
+        refreshControl={
+          <RefreshControl refreshing={isLoading} onRefresh={onRefresh} />
+        }
       >
         <View className="pt-10 mb-6">
           <Text className="text-4xl font-extrabold text-gray-900">Cześć, {user?.displayName}!</Text>

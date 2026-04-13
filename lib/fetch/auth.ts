@@ -93,7 +93,9 @@ export const saveExpoToken = async (userId: string, pushToken: string) => {
       headers: {
         "Content-Type": "application/json",
         Authorization:
-          session && typeof session.token === "string" ? session.token : "",
+          session && typeof session.token === "string"
+            ? `Bearer ${session.token}`
+            : "",
       },
       body: JSON.stringify({
         userId,

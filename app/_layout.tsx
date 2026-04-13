@@ -1,5 +1,6 @@
 import '../global.css';
 
+import ConnectionBanner from '@/components/ConnectionBanner';
 import { setNotificationHandler } from 'expo-notifications';
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
@@ -29,6 +30,8 @@ export default function RootLayout() {
             <StatusBar style="auto" />
 
             <SafeAreaProvider>
+              <ConnectionBanner />
+
               <Stack>
                 <Stack.Screen name="index" options={{ headerShown: false }} />
                 <Stack.Screen name="(tabs)" options={{ headerShown: false }} />

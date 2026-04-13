@@ -3,19 +3,37 @@ import DisplayChores from '@/components/Chores/DisplayChores'
 import Ionicons from '@expo/vector-icons/Ionicons'
 import React, { useState } from 'react'
 import { ScrollView, Text, TouchableOpacity, View } from 'react-native'
+import { RefreshControl } from 'react-native-gesture-handler'
 import { SafeAreaView } from 'react-native-safe-area-context'
+import { useSession } from '../(context)/AuthContext'
 import { useChores } from '../(context)/ChoresContext'
 
 export default function DailyChoresScreen() {
-  const { choresUser } = useChores();
+  const { choresUser, fetchData, isLoading } = useChores();
+  const { user } = useSession();
 
   const [isModalVisible, setIsModalVisible] = useState(false);
+
+  const onRefresh = async () => {
+    try {
+      if (!user?._id) throw new Error("Użytkownik jest wymagany");
+
+      await fetchData({
+        userId: user._id
+      });
+    } catch (error) {
+      console.error('Error refreshing chores:', error);
+    }
+  };
 
   return (
     <SafeAreaView className="flex-1 bg-white">
       <ScrollView
         className="flex-1 px-4"
         contentContainerStyle={{ paddingBottom: 100 }}
+        refreshControl={
+          <RefreshControl refreshing={isLoading} onRefresh={onRefresh} />
+        }
       >
         <View className="px-6 pt-10">
           <Text className="text-4xl font-bold text-gray-800">Dzisiejsze 🔥 {choresUser.dailyStreak}</Text>

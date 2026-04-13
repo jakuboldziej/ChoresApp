@@ -1,6 +1,8 @@
+// lib/fetch/users.ts
 import { getItemAsync } from "expo-secure-store";
-import { parseAuthToken, User } from "../auth";
 import { apiUrl } from "../constants";
+
+import { parseAuthToken, type User } from "../authUtils";
 
 export const getUser = async (displayName: string): Promise<User | null> => {
   try {
@@ -22,7 +24,9 @@ export const addFriend = async (friendsCode: string) => {
       method: "POST",
       headers: {
         Authorization:
-          session && typeof session.token === "string" ? session.token : "",
+          session && typeof session.token === "string"
+            ? `Bearer ${session.token}`
+            : "",
         "Content-Type": "application/json",
       },
       body: JSON.stringify({

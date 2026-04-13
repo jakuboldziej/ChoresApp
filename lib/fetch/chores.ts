@@ -31,7 +31,9 @@ export const getChores = async (
       method: "GET",
       headers: {
         Authorization:
-          session && typeof session.token === "string" ? session.token : "",
+          session && typeof session.token === "string"
+            ? `Bearer ${session.token}`
+            : "",
       },
     });
 
@@ -51,7 +53,9 @@ export const getChore = async (choreId: string): Promise<ChoreType | null> => {
       method: "GET",
       headers: {
         Authorization:
-          session && typeof session.token === "string" ? session.token : "",
+          session && typeof session.token === "string"
+            ? `Bearer ${session.token}`
+            : "",
       },
     });
 
@@ -75,7 +79,9 @@ export const postChore = async (data: ChoreType): Promise<ChoreType | null> => {
       method: "POST",
       headers: {
         Authorization:
-          session && typeof session.token === "string" ? session.token : "",
+          session && typeof session.token === "string"
+            ? `Bearer ${session.token}`
+            : "",
         "Content-Type": "application/json",
       },
       body: JSON.stringify(data),
@@ -99,7 +105,9 @@ export const patchChore = async (
       method: "PATCH",
       headers: {
         Authorization:
-          session && typeof session.token === "string" ? session.token : "",
+          session && typeof session.token === "string"
+            ? `Bearer ${session.token}`
+            : "",
         "Content-Type": "application/json",
       },
       body: JSON.stringify(data),
@@ -129,7 +137,9 @@ export const deleteChore = async (
       method: "DELETE",
       headers: {
         Authorization:
-          session && typeof session.token === "string" ? session.token : "",
+          session && typeof session.token === "string"
+            ? `Bearer ${session.token}`
+            : "",
       },
     });
 
