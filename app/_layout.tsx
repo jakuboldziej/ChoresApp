@@ -1,12 +1,14 @@
 import '../global.css';
 
 import ConnectionBanner from '@/components/ConnectionBanner';
+import webSocketService from '@/lib/websocket/WebSocketService';
 import { setNotificationHandler } from 'expo-notifications';
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
+import { useEffect } from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from "react-native-safe-area-context";
-import { SessionProvider } from "./(context)/AuthContext";
+import { SessionProvider, useSession } from "./(context)/AuthContext";
 import { ChoresProvider } from "./(context)/ChoresContext";
 import { FriendsProvider } from "./(context)/FriendsContext";
 import { SplashScreenController } from "./splash";
@@ -21,13 +23,23 @@ setNotificationHandler({
 });
 
 export default function RootLayout() {
+  const { session, user } = useSession();
+
+  useEffect(() => {
+    if (user) {
+      webSocketService.authenticateUser(user.displayName, user._id);
+    } else if (session === null) {
+      webSocketService.disconnect();
+    }
+  }, [session, user]);
+
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SessionProvider>
         <FriendsProvider>
           <ChoresProvider>
             <SplashScreenController />
-            <StatusBar style="auto" />
+            <StatusBar style="dark" />
 
             <SafeAreaProvider>
               <ConnectionBanner />

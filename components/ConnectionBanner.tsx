@@ -1,4 +1,5 @@
 import { useWebSocket } from '@/lib/websocket/useWebSocket';
+import { useSegments } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
 import { Animated, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -8,6 +9,9 @@ export default function ConnectionBanner() {
   const [shouldRender, setShouldRender] = useState(false);
   const slideAnim = useRef(new Animated.Value(-100)).current;
   const insets = useSafeAreaInsets();
+
+  const segments = useSegments();
+  const isLoginPage = segments[0] === 'sign-in';
 
   useEffect(() => {
     let timeout: ReturnType<typeof setTimeout>;
@@ -36,7 +40,7 @@ export default function ConnectionBanner() {
     return () => clearTimeout(timeout);
   }, [isConnected, slideAnim]);
 
-  if (!shouldRender) return null;
+  if (!shouldRender || isLoginPage) return null;
 
   return (
     <Animated.View

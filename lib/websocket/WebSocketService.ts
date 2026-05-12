@@ -79,13 +79,10 @@ class WebSocketService {
   private authenticationTimer: any = null;
   private isAuthenticating: boolean = false;
   private lastEvents: Map<string, any> = new Map();
+  private heartbeatTimer: any = null;
 
   constructor() {
-    try {
-      this.initializeConnection();
-    } catch (error) {
-      console.error("❌ Failed to initialize WebSocket:", error);
-    }
+    console.info("🔌 WebSocketService initialized in idle mode");
   }
 
   private getServerUrl(): string {
@@ -106,7 +103,7 @@ class WebSocketService {
     const serverUrl = this.getServerUrl();
 
     this.socket = io(serverUrl, {
-      transports: ["polling", "websocket"],
+      transports: ["websocket"],
       upgrade: true,
       timeout: 20000,
       reconnection: true,
@@ -115,9 +112,6 @@ class WebSocketService {
       reconnectionDelayMax: 5000,
       forceNew: false,
       autoConnect: true,
-      query: {
-        transport: "polling",
-      },
     });
 
     this.setupEventHandlers();
@@ -127,26 +121,31 @@ class WebSocketService {
     if (!this.socket) return;
 
     this.socket.on("connect", () => {
-      console.log("✅ WebSocket connected successfully");
+      console.info("✅ WebSocket connected successfully");
       this.isConnected = true;
       this.reconnectAttempts = 0;
 
-      if (this.userDisplayName && this.userId && !this.isAuthenticating) {
-        setTimeout(() => {
-          if (this.userDisplayName && this.userId && !this.isAuthenticating) {
-            this.sendAuthenticationData();
-          }
-        }, 500);
+      if (this.userDisplayName && this.userId) {
+        this.sendAuthenticationData();
+        this.isAuthenticating = false;
+        if (this.authenticationTimer) {
+          clearTimeout(this.authenticationTimer);
+          this.authenticationTimer = null;
+        }
       }
+
+      this.startHeartbeat();
     });
 
-    this.socket.on("disconnect", () => {
+    this.socket.on("disconnect", (data) => {
       this.isConnected = false;
       this.isAuthenticating = false;
       if (this.authenticationTimer) {
         clearTimeout(this.authenticationTimer);
         this.authenticationTimer = null;
       }
+
+      this.stopHeartbeat();
     });
 
     this.socket.on("connect_error", (error) => {
@@ -161,7 +160,7 @@ class WebSocketService {
 
       if (this.reconnectAttempts >= this.maxReconnectAttempts) {
         console.error("❌ Max reconnection attempts reached");
-        console.log(
+        console.info(
           "🔄 Disabling WebSocket - continuing without real-time features",
         );
         this.socket?.disconnect();
@@ -171,7 +170,7 @@ class WebSocketService {
     });
 
     this.socket.on("reconnect", (attemptNumber) => {
-      console.log(`🔄 WebSocket reconnected after ${attemptNumber} attempts`);
+      console.info(`🔄 WebSocket reconnected after ${attemptNumber} attempts`);
       this.isConnected = true;
     });
 
@@ -182,7 +181,7 @@ class WebSocketService {
     if (!this.socket) return;
 
     this.socket.on("userAuthenticated", (data: any) => {
-      console.log("✅ User authentication confirmed by server:", data);
+      console.info("✅ User authentication confirmed by server:", data);
     });
 
     this.socket.on("error", (error: any) => {
@@ -288,6 +287,22 @@ class WebSocketService {
     });
   }
 
+  private startHeartbeat() {
+    this.stopHeartbeat();
+    this.heartbeatTimer = setInterval(() => {
+      if (this.isConnected) {
+        this.socket?.emit("heartbeat");
+      }
+    }, 25000); // Send every 25s to stay under the 60s limit
+  }
+
+  private stopHeartbeat() {
+    if (this.heartbeatTimer) {
+      clearInterval(this.heartbeatTimer);
+      this.heartbeatTimer = null;
+    }
+  }
+
   // Public API
 
   authenticateUser(displayName: string, userId: string) {
@@ -299,19 +314,17 @@ class WebSocketService {
       this.authenticationTimer = null;
     }
 
-    if (this.isAuthenticating) {
-      return;
-    }
-
     this.isAuthenticating = true;
 
-    if (this.socket && this.isConnected) {
+    if (this.socket && this.socket.connected) {
       this.sendAuthenticationData();
       this.isAuthenticating = false;
-    } else if (this.socket && !this.isConnected) {
-      this.waitForConnectionAndAuthenticate();
     } else {
-      this.reconnect();
+      if (!this.socket) {
+        this.initializeConnection();
+      } else {
+        this.socket.connect();
+      }
       this.waitForConnectionAndAuthenticate();
     }
   }
@@ -333,7 +346,7 @@ class WebSocketService {
         }),
       );
     } else {
-      console.log("🔐 Cannot send authentication data - missing data:", {
+      console.info("🔐 Cannot send authentication data - missing data:", {
         hasSocket: !!this.socket,
         isConnected: this.isConnected,
         userDisplayName: this.userDisplayName,
@@ -431,6 +444,7 @@ class WebSocketService {
   }
 
   disconnect() {
+    this.stopHeartbeat();
     if (this.authenticationTimer) {
       clearTimeout(this.authenticationTimer);
       this.authenticationTimer = null;
@@ -439,11 +453,11 @@ class WebSocketService {
     this.isAuthenticating = false;
 
     if (this.socket) {
-      console.log("🔌 Disconnecting WebSocket...");
+      console.info("🔌 Disconnecting WebSocket...");
+      this.socket.removeAllListeners();
       this.socket.disconnect();
+      this.socket = null;
       this.isConnected = false;
-    } else {
-      console.log("🔌 No socket to disconnect");
     }
   }
 

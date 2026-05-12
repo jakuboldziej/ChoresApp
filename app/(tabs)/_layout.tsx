@@ -28,7 +28,6 @@ export default function TabLayout() {
           backgroundColor: '#25292e',
           paddingBottom: insets.bottom,
           height: 49 + insets.bottom,
-
         },
       }}
     >

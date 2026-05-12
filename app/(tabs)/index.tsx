@@ -29,7 +29,7 @@ export default function Index() {
 
   useEffect(() => {
     const notificationListener = addNotificationReceivedListener(notification => {
-      console.log("Received notification:", {
+      console.info("Received notification:", {
         title: notification.request.content.title,
         body: notification.request.content.body,
         data: notification.request.content.data

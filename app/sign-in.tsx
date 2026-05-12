@@ -1,4 +1,4 @@
-import { LoginResponse, validatePassword } from '@/lib/auth';
+import { LoginResponse } from '@/lib/auth';
 import { login } from '@/lib/fetch/auth';
 import { router } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
@@ -21,12 +21,12 @@ export default function SignIn() {
         return;
       }
 
-      const validatedPassword = validatePassword(password);
+      // const validatedPassword = validatePassword(password);
 
-      if (validatedPassword.isValid === false) {
-        setErrorMessage(validatedPassword.message as string);
-        return;
-      }
+      // if (validatedPassword.isValid === false) {
+      //   setErrorMessage(validatedPassword.message as string);
+      //   return;
+      // }
     }
 
     setIsLoading(true);
@@ -40,7 +40,8 @@ export default function SignIn() {
         await signIn(false, response as LoginResponse);
       }
       router.replace('/(tabs)');
-    } catch {
+    } catch (err) {
+      console.error(err)
       Alert.alert('Error', 'Nie udało się zalogować. Spróbuj ponownie.');
     } finally {
       setIsLoading(false);
