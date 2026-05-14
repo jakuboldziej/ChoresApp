@@ -1,11 +1,11 @@
 import {
   createAuthToken,
   createGuestUser,
-  getUserFromToken,
+  parseAuthToken,
   type LoginResponse,
   type User
 } from '@/lib/auth';
-import { saveExpoToken } from '@/lib/fetch/auth';
+import { checkSession, refreshToken, saveExpoToken } from '@/lib/fetch/auth';
 import { useStorageState } from '@/lib/hooks/useStorageState';
 import { registerForPushNotificationsAsync } from '@/lib/notifications';
 import { webSocketService } from '@/lib/websocket/WebSocketService';
@@ -32,21 +32,19 @@ const AuthContext = createContext<AuthContextType>({
 export function useSession() {
   const value = use(AuthContext);
   if (!value) throw new Error('useSession must be wrapped in a <SessionProvider />');
-
   return value;
 }
 
 export function SessionProvider({ children }: PropsWithChildren) {
   const [[isLoading, session], setSession] = useStorageState('session');
   const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const [userLoading, setUserLoading] = useState(false);
+  const [userLoading, setUserLoading] = useState(true);
   const [expoPushToken, setExpoPushToken] = useState<string | null>(null);
 
   const signIn = async (asGuest: boolean, response?: LoginResponse | undefined) => {
     try {
       if (asGuest) {
         const guestUser = createGuestUser();
-
         const guestToken = createAuthToken('guest-token', guestUser);
         setSession(guestToken);
         setCurrentUser(guestUser);
@@ -65,7 +63,6 @@ export function SessionProvider({ children }: PropsWithChildren) {
   const signOut = async () => {
     try {
       webSocketService.resetConnection();
-
       setSession(null);
       setCurrentUser(null);
     } catch (error) {
@@ -75,19 +72,48 @@ export function SessionProvider({ children }: PropsWithChildren) {
   };
 
   useEffect(() => {
-    const loadUser = async () => {
+    const validateAndLoadUser = async () => {
+      if (isLoading) return;
+
       if (session) {
         setUserLoading(true);
         try {
-          const user = await getUserFromToken(session);
-          setCurrentUser(user);
+          const tokenData = parseAuthToken(session);
 
-          if (!user) {
-            setSession(null);
+          if (!tokenData || tokenData.user.guest) {
+            setCurrentUser(tokenData?.user || null);
+            setUserLoading(false);
+            return;
           }
-        } catch {
+
+          const check = await checkSession(tokenData.token);
+
+          if (check.ok) {
+            if (check.shouldRefresh) {
+              const refresh = await refreshToken(tokenData.token);
+              if (refresh.token) {
+                const newSession = createAuthToken(refresh.token, tokenData.user);
+                setSession(newSession);
+              }
+            }
+            setCurrentUser(tokenData.user);
+          } else if (check.message === "Token expired") {
+            const refresh = await refreshToken(tokenData.token);
+            if (refresh.token) {
+              const newSession = createAuthToken(refresh.token, tokenData.user);
+              setSession(newSession);
+              setCurrentUser(tokenData.user);
+            } else {
+              setSession(null);
+              setCurrentUser(null);
+            }
+          } else {
+            setSession(null);
+            setCurrentUser(null);
+          }
+        } catch (err) {
+          console.error("Session validation failed", err);
           setSession(null);
-          setCurrentUser(null);
         } finally {
           setUserLoading(false);
         }
@@ -97,41 +123,26 @@ export function SessionProvider({ children }: PropsWithChildren) {
       }
     };
 
-    loadUser();
-  }, [session, setSession]);
+    validateAndLoadUser();
+  }, [session, isLoading]);
 
   useEffect(() => {
-    const setupPushNotifications = async () => {
-      if (currentUser?.displayName) {
-        try {
-          const token = await registerForPushNotificationsAsync(currentUser.displayName);
-          if (token) {
-            await saveExpoToken(currentUser._id, token);
-            setExpoPushToken(token);
-          }
-        } catch (error) {
-          console.error('Failed to register for push notifications:', error);
+    if (currentUser?.displayName) {
+      registerForPushNotificationsAsync(currentUser.displayName).then(token => {
+        if (token) {
+          saveExpoToken(currentUser._id, token);
+          setExpoPushToken(token);
         }
-      } else {
-        setExpoPushToken(null);
-      }
-    };
-
-    const setupWebSocketConnection = () => {
-      if (currentUser?.displayName && currentUser?._id) {
-        webSocketService.authenticateUser(currentUser.displayName, currentUser._id);
-      } else if (!session && !isLoading && !userLoading) {
-        webSocketService.clearUserData();
-        webSocketService.disconnect();
-      }
-    };
-
-    setupPushNotifications();
-    setupWebSocketConnection();
+      });
+      webSocketService.authenticateUser(currentUser.displayName, currentUser._id);
+    } else if (!session && !isLoading && !userLoading) {
+      webSocketService.clearUserData();
+      webSocketService.disconnect();
+    }
   }, [currentUser, isLoading, userLoading, session]);
 
   return (
-    <AuthContext
+    <AuthContext.Provider
       value={{
         signIn,
         signOut,
@@ -141,6 +152,6 @@ export function SessionProvider({ children }: PropsWithChildren) {
         isLoading: isLoading || userLoading,
       }}>
       {children}
-    </AuthContext>
+    </AuthContext.Provider>
   );
 }

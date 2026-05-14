@@ -109,3 +109,19 @@ export const saveExpoToken = async (userId: string, pushToken: string) => {
     return;
   }
 };
+
+export const checkSession = async (token: string) => {
+  const response = await fetch(`${apiUrl}/auth/check-session`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return await response.json();
+};
+
+export const refreshToken = async (token: string) => {
+  const response = await fetch(`${apiUrl}/auth/refresh-token`, {
+    method: "POST",
+    headers: { Authorization: token },
+  });
+  return await response.json();
+};
