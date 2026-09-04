@@ -1,3 +1,4 @@
+import { useSession } from '@/app/(context)/AuthContext';
 import { useWebSocket } from '@/lib/websocket/useWebSocket';
 import { useSegments } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
@@ -6,6 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function ConnectionBanner() {
   const { isConnected } = useWebSocket();
+  const { user } = useSession();
   const [shouldRender, setShouldRender] = useState(false);
   const slideAnim = useRef(new Animated.Value(-100)).current;
   const insets = useSafeAreaInsets();
@@ -32,15 +34,15 @@ export default function ConnectionBanner() {
         toValue: -100,
         duration: 300,
         useNativeDriver: true,
-      }).start(() => {
-        setShouldRender(false);
+      }).start(({ finished }) => {
+        if (finished) setShouldRender(false);
       });
     }
 
     return () => clearTimeout(timeout);
   }, [isConnected, slideAnim]);
 
-  if (!shouldRender || isLoginPage) return null;
+  if (!shouldRender || isLoginPage || !user) return null;
 
   return (
     <Animated.View

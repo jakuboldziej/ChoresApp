@@ -27,13 +27,12 @@ export interface LoginResponse {
   friendsRequestsReceived: string;
 }
 
+export const SESSION_MAX_AGE_DAYS = 30;
+export const REFRESH_THRESHOLD_MS = 7 * 24 * 60 * 60 * 1000;
+
 export function parseAuthToken(tokenString: string): AuthToken | null {
   try {
     const token = JSON.parse(tokenString);
-
-    if (token.expiresAt && Date.now() > token.expiresAt) {
-      return null;
-    }
 
     if (
       !token.token ||
@@ -53,7 +52,7 @@ export function parseAuthToken(tokenString: string): AuthToken | null {
 export function createAuthToken(
   token: string,
   user: User,
-  expiresInDays: number = 7,
+  expiresInDays: number = SESSION_MAX_AGE_DAYS,
 ): string {
   const authToken: AuthToken = {
     token,
@@ -62,6 +61,11 @@ export function createAuthToken(
   };
 
   return JSON.stringify(authToken);
+}
+
+export function shouldRefreshToken(authToken: AuthToken): boolean {
+  if (typeof authToken.expiresAt !== "number") return false;
+  return authToken.expiresAt - Date.now() < REFRESH_THRESHOLD_MS;
 }
 
 export function validatePassword(password: string): {

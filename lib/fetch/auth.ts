@@ -110,18 +110,31 @@ export const saveExpoToken = async (userId: string, pushToken: string) => {
   }
 };
 
-export const checkSession = async (token: string) => {
-  const response = await fetch(`${apiUrl}/auth/check-session`, {
+export interface SessionResponse {
+  status: number;
+  ok?: boolean;
+  shouldRefresh?: boolean;
+  expiresIn?: number;
+  token?: string;
+  message?: string;
+}
+
+const postSessionRequest = async (
+  endpoint: string,
+  token: string,
+): Promise<SessionResponse> => {
+  const response = await fetch(`${apiUrl}/auth/${endpoint}`, {
     method: "POST",
     headers: { Authorization: `Bearer ${token}` },
   });
-  return await response.json();
+
+  const data = await response.json().catch(() => ({}));
+
+  return { status: response.status, ...data };
 };
 
-export const refreshToken = async (token: string) => {
-  const response = await fetch(`${apiUrl}/auth/refresh-token`, {
-    method: "POST",
-    headers: { Authorization: token },
-  });
-  return await response.json();
-};
+export const checkSession = (token: string) =>
+  postSessionRequest("check-session", token);
+
+export const refreshToken = (token: string) =>
+  postSessionRequest("refresh-token", token);

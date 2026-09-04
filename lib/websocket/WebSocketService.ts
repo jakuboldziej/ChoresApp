@@ -1,3 +1,4 @@
+import { AppState, AppStateStatus } from "react-native";
 import { io, Socket } from "socket.io-client";
 
 export interface WebSocketEvents {
@@ -80,6 +81,7 @@ class WebSocketService {
   private isAuthenticating: boolean = false;
   private lastEvents: Map<string, any> = new Map();
   private heartbeatTimer: any = null;
+  private appStateSubscription: { remove: () => void } | null = null;
 
   constructor() {
     console.info("🔌 WebSocketService initialized in idle mode");
@@ -101,20 +103,41 @@ class WebSocketService {
 
   private initializeConnection() {
     const serverUrl = this.getServerUrl();
+    if (!serverUrl) return;
 
     this.socket = io(serverUrl, {
-      transports: ["websocket"],
+      transports: ["polling", "websocket"],
       upgrade: true,
       timeout: 20000,
       reconnection: true,
-      reconnectionAttempts: this.maxReconnectAttempts,
+      reconnectionAttempts: Infinity,
       reconnectionDelay: 1000,
-      reconnectionDelayMax: 5000,
+      reconnectionDelayMax: 10000,
       forceNew: false,
       autoConnect: true,
     });
 
     this.setupEventHandlers();
+  }
+
+  private setupAppStateListener() {
+    if (this.appStateSubscription) return;
+
+    this.appStateSubscription = AppState.addEventListener(
+      "change",
+      (nextAppState: AppStateStatus) => {
+        if (nextAppState !== "active") return;
+        if (!this.userDisplayName || !this.userId) return;
+
+        if (!this.socket) {
+          this.initializeConnection();
+          this.waitForConnectionAndAuthenticate();
+        } else if (!this.socket.connected) {
+          console.info("🔄 App became active, reconnecting WebSocket...");
+          this.socket.connect();
+        }
+      },
+    );
   }
 
   private setupEventHandlers() {
@@ -149,23 +172,17 @@ class WebSocketService {
     });
 
     this.socket.on("connect_error", (error) => {
-      console.error("❌ WebSocket connection error:", error);
-      console.error("❌ Error details:", {
-        message: error.message,
-        name: error.name,
-        stack: error.stack,
-        toString: error.toString(),
-      });
       this.reconnectAttempts++;
+      this.isConnected = false;
 
-      if (this.reconnectAttempts >= this.maxReconnectAttempts) {
-        console.error("❌ Max reconnection attempts reached");
-        console.info(
-          "🔄 Disabling WebSocket - continuing without real-time features",
+      if (
+        this.reconnectAttempts === 1 ||
+        this.reconnectAttempts % this.maxReconnectAttempts === 0
+      ) {
+        console.error(
+          `❌ WebSocket connection error (attempt ${this.reconnectAttempts}):`,
+          error.message,
         );
-        this.socket?.disconnect();
-        this.socket = null;
-        this.isConnected = false;
       }
     });
 
@@ -186,10 +203,6 @@ class WebSocketService {
 
     this.socket.on("error", (error: any) => {
       console.error("❌ Socket error:", error);
-    });
-
-    this.socket.on("connect_error", (error: any) => {
-      console.error("❌ Connect error:", error);
     });
 
     this.socket.on("sendFriendsRequest", (data: string) => {
@@ -308,6 +321,8 @@ class WebSocketService {
   authenticateUser(displayName: string, userId: string) {
     this.userDisplayName = displayName;
     this.userId = userId;
+
+    this.setupAppStateListener();
 
     if (this.authenticationTimer) {
       clearTimeout(this.authenticationTimer);
@@ -489,16 +504,8 @@ class WebSocketService {
     this.clearUserData();
     this.disconnect();
 
-    if (this.socket) {
-      this.socket.removeAllListeners();
-      this.socket.disconnect();
-      this.socket = null;
-    }
-
     this.isConnected = false;
     this.reconnectAttempts = 0;
-
-    this.initializeConnection();
   }
 
   getConnectionStatus(): boolean {
