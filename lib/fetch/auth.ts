@@ -45,7 +45,7 @@ export const login = async (displayName: string, password: string) => {
     if (!data?.token || !data)
       throw new Error(data?.message || "Błąd autoryzacji");
 
-    const userResponse = await getUser(displayName);
+    const userResponse = await getUser(displayName, data.token);
 
     if (!userResponse) throw new Error("Błąd autoryzacji");
     if (userResponse && (userResponse as any).message)

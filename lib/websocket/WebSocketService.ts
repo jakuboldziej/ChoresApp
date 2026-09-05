@@ -1,5 +1,17 @@
+import { getItemAsync } from "expo-secure-store";
 import { AppState, AppStateStatus } from "react-native";
 import { io, Socket } from "socket.io-client";
+import { parseAuthToken } from "../authUtils";
+
+const readSessionToken = async (): Promise<string | null> => {
+  try {
+    const stored = await getItemAsync("session");
+    const session = stored ? parseAuthToken(stored) : null;
+    return session?.token ?? null;
+  } catch {
+    return null;
+  }
+};
 
 export interface WebSocketEvents {
   // Friends events
@@ -106,6 +118,9 @@ class WebSocketService {
     if (!serverUrl) return;
 
     this.socket = io(serverUrl, {
+      auth: (cb: (data: object) => void) => {
+        readSessionToken().then((token) => cb({ token }));
+      },
       transports: ["polling", "websocket"],
       upgrade: true,
       timeout: 20000,

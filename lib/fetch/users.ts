@@ -4,9 +4,19 @@ import { apiUrl } from "../constants";
 
 import { parseAuthToken, type User } from "../authUtils";
 
-export const getUser = async (displayName: string): Promise<User | null> => {
+export const getUser = async (displayName: string, token?: string): Promise<User | null> => {
   try {
-    const response = await fetch(`${apiUrl}/auth/users/${displayName}`);
+    let authToken = token;
+
+    if (!authToken) {
+      const sessionString = await getItemAsync("session");
+      const session = sessionString ? parseAuthToken(sessionString) : null;
+      authToken = session?.token;
+    }
+
+    const response = await fetch(`${apiUrl}/auth/users/${displayName}`, {
+      headers: authToken ? { Authorization: `Bearer ${authToken}` } : {},
+    });
 
     return await response.json();
   } catch (error: unknown) {
